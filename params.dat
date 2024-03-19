@@ -1,0 +1,14 @@
+maxneventsperjob: 100000
+tune: 14
+beamidA: 2212
+beamidB: 2212
+eCM: 5020.
+switchoffbhadrondecays: true
+pTHatMin: 80.0
+ISR: on
+FSR: on
+jetR: 0.4
+trackLowPtCut: 0.15
+trackEtaCut: 2.0
+HFLowPtCut: 5.0
+jetminpt: 100.0
