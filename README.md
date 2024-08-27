@@ -1,8 +1,10 @@
 # Substructure and energy correlators of doubly-charm tagged jets
 
 This repository provides the code necessary to study the properties of the $g \to c\bar{c}$ splitting function in vacuum, and to compute its modification in the quark-gluon plasma. This repository contains code for two example analyses in this framework
-1. \underline{c-cbar jet substructure}: identify jets containing a c-cbar pair, reconstruct the features of the $g \to c\bar{c}$ splitting according to Pythia, and use jet reclustering to provide a data-driven reconstruction of the features of the splitting. Compute the medium modification of the splitting.
-2. \underline{energy correlators of c-cbar jets}: identify jets containing a c-cbar pair, reconstruct the features of the $g \to c\bar{c}$ splitting according to Pythia, use tagged charm quarks (or hadrons) to compute two- and three-point energy correlators.
+1. *c-cbar jet substructure*: identify jets containing a c-cbar pair, reconstruct the features of the $g \to c\bar{c}$ splitting according to Pythia, and use jet reclustering to provide a data-driven reconstruction of the features of the splitting. Compute the medium modification of the splitting.
+2. *energy correlators of c-cbar jets*: identify jets containing a c-cbar pair, reconstruct the features of the $g \to c\bar{c}$ splitting according to Pythia, use tagged charm quarks (or hadrons) to compute two- and three-point energy correlators, and compute their medium modification.
+
+The computation of the medium modification is based on the calculation in [arXiv:2203.11241](https://arxiv.org/abs/2203.11241) (JHEP 01 (2023) 080).
 
 ## Getting Started:
 This repository requires that Pythia8 and fastjet are installed in order to run. The user should edit `PYTHIA8_LIB`, `PYTHIA8_INCLUDE`, `FASTJET_LIB`, and `FASTJET_INCLUDE` in the Makefile to point to their local installation.
@@ -51,7 +53,7 @@ The medium modification is implemented as described in (...)
 
 `jetAlgorithm`: jet algorithm to use for the jet finding. Allowed values are antikt, kt, and CA
 
-`jetReclAlgorithm`: jet algorithm to use for the jet reclustering step (after the jet finding). Allowed values are antikt, kt, and CA
+`jetReclAlgorithm`: jet algorithm to use for the jet reclustering step (after the jet finding). Allowed values are antikt, kt, and CA. This parameter is only required for the substructure analysis and is not used for the EECs.
 
 `process`: specified the allowed processes in the Pythia hard event event generation. Allowed values are "all" (HardQCD:all=on) or "gg" (gluon initial states only)
 
