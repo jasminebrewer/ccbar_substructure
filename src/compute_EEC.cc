@@ -23,16 +23,15 @@ bool contains(fastjet::PseudoJet& jet, fastjet::PseudoJet particle);
 
 int main(int argc, char* argv[]) {
 
-  if (argc!=3) {
-    cout << "Incorrect number of command line arguments -- command line arguments are the name of a parameter file, and the name of the file in which to save log information" << endl;
+  if (argc!=2) {
+    cout << "Incorrect number of command line arguments -- command line argument should be the name of a parameter file" << endl;
     return -1;
   }
   
   // Generator. Process selection. 
   Pythia pythia;
   globalAnalysis analysis(pythia, static_cast<std::string>(argv[1]));
-  string error_log_name = static_cast<std::string>(argv[2]);
-  analysis.initialize_pythia(error_log_name);
+  analysis.initialize_pythia();
 
   vector<std::string> histogram_names {"eec2_all", "eec2_part", "eec3_all", "eec3_part", "eec2_med_all", "eec2_med_part", "eec3_med_all", "eec3_med_part"};
   analysis.declare_histograms(histogram_names);

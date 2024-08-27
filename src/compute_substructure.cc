@@ -6,6 +6,7 @@
 #include "complex_Ei.hh"
 #include "histograms.hh"
 #include "medium_mod.hh"
+#include <time.h>
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -22,16 +23,15 @@ bool contains(fastjet::PseudoJet& jet, fastjet::PseudoJet particle);
 
 int main(int argc, char* argv[]) {
 
-  if (argc!=3) {
-    cout << "Incorrect number of command line arguments -- command line arguments are the name of a parameter file, and the name of the file in which to save log information" << endl;
+  if (argc!=2) {
+    cout << "Incorrect number of command line arguments -- command line argument should be the name of a parameter file" << endl;
     return -1;
   }
 
   // Generator. Process selection. 
   Pythia pythia;
   globalAnalysis analysis(pythia, static_cast<std::string>(argv[1]));
-  string error_log_name = static_cast<std::string>(argv[2]);
-  analysis.initialize_pythia(error_log_name);
+  analysis.initialize_pythia();
 
   // set global values for splitting parameters
   struct splitting_params params;

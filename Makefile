@@ -7,7 +7,7 @@ FASTJET_INCLUDE=/mnt/users/brewerj/fastjet-install/include
 FASTJET_LIB=/mnt/users/brewerj/fastjet-install/lib
 
 CXX = g++
-CXXFLAGS = -Iinclude -I${PYTHIA8_INCLUDE} -I${FASTJET_INCLUDE} -w -O2 -std=c++11 -pedantic -W -Wall -Wshadow -fPIC -pthread
+CXXFLAGS = -Iinclude -I${PYTHIA8_INCLUDE} -I${FASTJET_INCLUDE} -w -O2 -std=c++17 -pedantic -W -Wall -Wshadow -fPIC -pthread
 
 LDFLAGS = -L${PYTHIA8_LIB} -Wl,-rpath,${PYTHIA8_LIB} -L${FASTJET_LIB} -Wl,-rpath,${FASTJET_LIB}
 LDLIBS = -lpythia8 -ldl -lfastjet -lRecursiveTools -lfastjettools -lgsl

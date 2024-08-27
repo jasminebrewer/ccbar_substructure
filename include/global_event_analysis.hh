@@ -89,7 +89,7 @@ public:
   }
 
   // functions
-  void initialize_pythia(string error_log_name);
+  void initialize_pythia();
   void declare_histograms(vector<string> histogram_names);
   void normalize_histograms();
   void write_histograms();

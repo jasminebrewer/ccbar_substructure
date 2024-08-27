@@ -8,24 +8,22 @@
  * 
  * @param error_log_name: file name for the log file of the analysis
  */
-void globalAnalysis::initialize_pythia(string error_log_name) {
+void globalAnalysis::initialize_pythia() {
 	
   string param_name, param_value;
   bool switchoffbhadrondecays=true;
   bool D0decay=false;
 
-  _error_log.open(error_log_name);
-  assert(_error_log.is_open() && "cannot open the specified error log file.");
+  std::string preamble;
 
-  _error_log << "(*" << endl;
-  // initialize pythia according to the provided values in paramfile
+ // initialize pythia according to the provided values in paramfile
   while ( _parameter_file >> param_name >> param_value )
     {
-      // write parameters to log file
-      _error_log << param_name << param_value << endl;
+      // save parameters to prepend to log file
+      preamble.append( "# " + param_name + param_value + '\n' );
       if (param_name == "maxneventsperjob:") {
-	_n_events = stoi(param_value);
-	_pythia.readString("Main:numberOfEvents = "+param_value);
+	      _n_events = stoi(param_value);
+	      _pythia.readString("Main:numberOfEvents = "+param_value);
       }
       else if (param_name == "process:") {
         if (param_value == "all") _pythia.readString("HardQCD:all = on");
@@ -74,7 +72,6 @@ void globalAnalysis::initialize_pythia(string error_log_name) {
       else if (param_name == "trackPtMin:") _track_cuts.trackPtMin = stof(param_value);
       else if (param_name == "trackEtaCut:") {
         _track_cuts.trackEtaCut = stof(param_value);
-        cout << "setting track eta cut: " << stof(param_value) << endl;
       }
       else if (param_name == "HFPtMin:") _track_cuts.HFPtMin = stof(param_value);
       else if (param_name == "jetPtMin:") _track_cuts.JetPtMin = stof(param_value);
@@ -117,7 +114,11 @@ void globalAnalysis::initialize_pythia(string error_log_name) {
         cout << "unknown command line parameter " << param_name << endl;
       }
     }
-  _error_log << "*)" << endl;
+
+  _error_log.open("logfile_"+_file_label);
+  assert(_error_log.is_open() && "cannot open the specified error log file.");
+  _error_log << preamble;
+ 
 
   // Pick new random number seed for each run, based on clock
   _pythia.readString("Random:setSeed = on");
