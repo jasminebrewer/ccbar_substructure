@@ -1,6 +1,8 @@
 # Substructure and energy correlators of doubly-charm tagged jets
 
-This repository provides the code necessary to
+This repository provides the code necessary to study the properties of the $g \to c\bar{c}$ splitting function in vacuum, and to compute its modification in the quark-gluon plasma. This repository contains code for two example analyses in this framework
+1. \underline{c-cbar jet substructure}: identify jets containing a c-cbar pair, reconstruct the features of the $g \to c\bar{c}$ splitting according to Pythia, and use jet reclustering to provide a data-driven reconstruction of the features of the splitting. Compute the medium modification of the splitting.
+2. \underline{energy correlators of c-cbar jets}: identify jets containing a c-cbar pair, reconstruct the features of the $g \to c\bar{c}$ splitting according to Pythia, use tagged charm quarks (or hadrons) to compute two- and three-point energy correlators.
 
 ## Getting Started:
 This repository requires that Pythia8 and fastjet are installed in order to run. The user should edit `PYTHIA8_LIB`, `PYTHIA8_INCLUDE`, `FASTJET_LIB`, and `FASTJET_INCLUDE` in the Makefile to point to their local installation.
@@ -13,6 +15,8 @@ This builds executables both to computer c-cbar substructure (`build/compute_sub
 
 Provided with the repository are an example parameter file, `example_params.dat`, and an example shell script `run.sh`. The meaning of each parameter in the parameter file is discussed further below. `run.sh` takes as command line arguments 'substructure' or 'EEC' (depending on which analysis should be run), and the parameter file for the run, and saves the output of the run in the directory runs/(substructure or EEC)/run_*, which * is a 6-digit code distinguishing each run.
 
+### Explanation:
+The medium modification is implemented as described in (...)
 
 ### Parameters:
 `maxneventsperjob`: number of Pythia events to generate
@@ -60,6 +64,3 @@ Provided with the repository are an example parameter file, `example_params.dat`
 `L`: length of the medium, in fermi
 
 Leaving out parameters for the Pythia generation will revert to Pythia defaults.
-
-Explanation:
-The medium modification is implemented as described in (...)
