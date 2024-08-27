@@ -48,12 +48,6 @@ int main(int argc, char* argv[]) {
   JetDefinition jet_def(analysis._jet_algo, analysis._track_cuts.jetR);
   JetDefinition jet_def_recl(analysis._jet_recl_algo, 5.*analysis._track_cuts.jetR, fastjet::E_scheme, fastjet::Best); // use larger radius for the reclustering to make sure all jet constituents are included, even if the jet area is irregular
 
-
-  double z_cut = 0.20;
-  double beta  = 0.0;
-  fastjet::contrib::SoftDrop sd(beta, z_cut);
-  cout << "SoftDrop groomer is: " << sd.description() << endl;
-
   bool found_splitting;
   double med_weight=0.;
   
@@ -81,7 +75,7 @@ int main(int argc, char* argv[]) {
 
 	if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
 
-	//Splitting hardest_split = evt.find_hardest_splitting(jet);
+  //Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
 
 	// evt.find_splitting();
@@ -94,7 +88,7 @@ int main(int argc, char* argv[]) {
 
 	// make sure the jet contains these particles as well
 	if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
-
+  
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
 	params.z = evt._splitting._z;
 	params.Eg = evt._splitting._Eg;

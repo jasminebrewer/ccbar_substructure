@@ -49,7 +49,8 @@ public:
 
   vector<PseudoJet> _jets;              // up to two jets in the event passing the cuts
 
-  vector<PseudoJet> _tagged_particles;  // vector of PseudoJets containing the tagged particles
+  vector<PseudoJet> _tagged_particles;  // vector of PseudoJets containing the tagged final-state particles
+  vector<PseudoJet> _tagged_partons;    // for the case where hadronization is on, also store the tagged particles at parton-level
   PseudoJet _maxpt_tagged_antiparticle; // PseudoJet containing the maximum pt tagged particle in the event
   PseudoJet _maxpt_tagged_particle;     // PsuedoJet containing the maximum pt antiparticle in the event
   bool _has_pair;                       // true if the event contains a particle/ antiparticle pair of the tagged type; false otherwise

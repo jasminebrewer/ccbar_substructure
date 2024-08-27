@@ -23,6 +23,8 @@ namespace constants
   const int GLUON = 21;
   const int D0 = 421;
   const int D0BAR = -421;
+  const int B0 = 511;
+  const int B0BAR = -511;
   // particles masses
   const double CHARM_MASS = 1.27;
   const double BOTTOM_MASS = 4.18;
@@ -80,7 +82,7 @@ class globalAnalysis {
 public:
   // copy constructor
   globalAnalysis(globalAnalysis& analysis) : _pythia(analysis._pythia), _jet_algo(analysis._jet_algo), _jet_recl_algo(analysis._jet_recl_algo), _track_cuts(analysis._track_cuts), _is_parton_level(analysis._is_parton_level), _is_inclusive(analysis._is_inclusive),
-					     _particle_ids(analysis._particle_ids), _qhatL(analysis._qhatL), _L(analysis._L), _mc2(analysis._mc2) {}
+					     _particle_ids(analysis._particle_ids), _parton_ids(analysis._parton_ids), _qhatL(analysis._qhatL), _L(analysis._L), _mc2(analysis._mc2) {}
 
   // constructor a globalAnalysis instance from a pythia event and associated parameter file
   globalAnalysis(Pythia& pythia, string paramfile_name) : _pythia(pythia) {
@@ -110,6 +112,7 @@ public:
   bool _is_parton_level;                // flag for whether the event is parton- or hadron-level
   bool _is_inclusive;                   // whether to tag particular particles in the event or consider all equally. If false, particle_ids should not be empty
   vector<int> _particle_ids;            // particle ids of particles to tag (e.g., c and cbar)
+  vector<int> _parton_ids;              // for the case that hadronization is on, also set the ids of associated partons
 
   map<string, Histogram> _histograms;   // histogram object and a string handle used internally to identify each histogram
 

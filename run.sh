@@ -15,8 +15,10 @@ cd ${RUN_DIR}
 
 if [ ${1}=="substructure" ]
 then
-    addqueue -c "4 hours" ${BUILD_DIR}/compute_substructure ${2}
+    ${BUILD_DIR}/compute_substructure ${2}
+#    addqueue -c "4 hours" ${BUILD_DIR}/compute_substructure ${2}
 elif [ ${1}=="EEC" ]
 then
-    addqueue -c "4 hours" ${BUILD_DIR}/compute_EEC ${2}
+    ${BUILD_DIR}/compute_EEC ${2}
+#    addqueue -c "4 hours" ${BUILD_DIR}/compute_EEC ${2}
 fi

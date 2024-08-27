@@ -55,13 +55,50 @@ bool contains(PseudoJet& jet, PseudoJet particle) {
 }
 
 /**
+ * @brief helper function to return an empty PseudoJet object, with ExtraInfo defined
+ */
+PseudoJet emptyPseudoJet() {
+  PseudoJet empty = PseudoJet(0.,0.,0.,0.);
+  empty.set_user_info(new ExtraInfo(0, -1));
+  return empty;
+}
+
+/**
+ * @brief helper function to associate a particle with one of a list of other particles, based on which one has the minimum deltaR distance
+ *  
+ * primary use case is to associate a parton with its closest hadron
+ * 
+ * @param particle PseudoJet object referring to one particle
+ * @param tagged_particles vector of PseudoJets referring to a number of particles
+ * @return the particle in tagged_particles that is closest in deltaR to particle
+ */
+PseudoJet associate(PseudoJet particle, vector<PseudoJet> tagged_particles) {
+
+  double min_dR=1.e10;
+  PseudoJet associated_particle;
+  
+  for (auto tp: tagged_particles) {
+    // both particles have to have the same sign of their pdg (i.e. either both are particles, or both are antiparticles)
+    if ( signbit(tp.user_info<ExtraInfo>().pdg_id())!=signbit(particle.user_info<ExtraInfo>().pdg_id()) ) continue;
+    // then keep the one with minimum deltaR
+    if ( tp.delta_R(particle) < min_dR ) {
+      associated_particle = tp;
+      min_dR = tp.delta_R(particle);
+    }
+  }
+  if ( min_dR>0.4 ) associated_particle = emptyPseudoJet(); // association failed!
+  return associated_particle;
+}
+
+/**
  * @brief function to trace a non-final state pythia particle to the corresponding final state particle
  *  
  * the particle is assumed to have a unique daughter with the same particle id which allows that particle to be traced to the final state
  * (namely, this function should be used for particles undergoing q->qg splittings, and the function follows the q)
  * 
- * @param particle PseudoJet object for a particular particle to trace to the final state
- * @return PseudoJet object associated with the final state version of that particle
+ * @param particle PseudoJet object for a particular particle to trace to the final state (should be a parton)
+ * @return PseudoJet object associated with the final state version of that particle, which is either a parton or a hadron depending on 
+ * whether the event is parton- or hadron-level
  */
 PseudoJet EventCCbar::follow_to_final_state( PseudoJet particle) {
 
@@ -69,18 +106,22 @@ PseudoJet EventCCbar::follow_to_final_state( PseudoJet particle) {
   int pid = particle.user_info<ExtraInfo>().pdg_id(); // its particle id
   Particle& current_particle = _py_event[ current_index ]; // pythia particle associated with that particle
   
-  // while the current particle is not final
-  while (!current_particle.isFinal()) {
+  //cout << "is parton level: " << _is_parton_level << ", and has pair" << endl;
 
-    current_particle = _py_event[ current_index ];
+  // while the current particle is not final
+  while ( (_is_parton_level && !current_particle.isFinal()) || (!_is_parton_level && !current_particle.isFinalPartonLevel()) ) {
  
     // set the new current particle to which daughter has the same particle id as the current particle
     if ( _py_event[ current_particle.daughter1() ].id()==pid) current_index = current_particle.daughter1();
     else if ( _py_event[ current_particle.daughter2() ].id()==pid) current_index = current_particle.daughter2();
+
+    current_particle = _py_event[ current_index ];
   }
 
-  // convert the final particle to a PseudoJet object and return
-  return as_pseudojet( _py_event[ current_index ] );
+  // if the event is hadron-level, associate the particle with one of the tagged hadrons in the event
+  if (!_is_parton_level) return associate( as_pseudojet(current_particle), _tagged_particles );
+  // else convert the final particle to a PseudoJet object and return
+  else return as_pseudojet( current_particle );
 }
 
 /**
@@ -98,7 +139,12 @@ void EventCCbar::read_event() {
   // loop over all particles in the event
   for (Particle& p: _py_event) {
 
-    if (!p.isFinal()) continue; // consider only final states
+    // if hadronization is on, store tagged particles at parton-level to associate them later with the tagged hadrons
+    if (!_is_parton_level && p.isFinalPartonLevel()) {
+      if (is_contained(p.id(), _parton_ids)) _tagged_partons.push_back( PseudoJet(p.px(), p.py(), p.pz(), p.e()) );
+    }
+
+    if (!p.isFinal()) continue; // otherwise, consider only final states
 
     // perform cuts to remove particles that would have gone out of the detector
     if (p.pT() < _track_cuts.trackPtMin) continue;
@@ -231,7 +277,7 @@ bool EventCCbar::find_splitting_v2(PseudoJet jet, double jetR) {
   for (Particle& p: _py_event) {
 
     if (p.status()!=constants::SHOWER) continue; // only consider particles produced through showering
-    if (p.id()!=constants::CHARM) continue; // only consider charms
+    if (!is_contained(p.id(), _parton_ids)) continue; // only consider particles of the type you are trying to tag
 
     Particle& mother = _py_event[ p.mother1() ];
     if ( mother.id()!=constants::GLUON ) continue; // only consider particles whose mother is a gluon

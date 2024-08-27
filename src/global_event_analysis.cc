@@ -5,8 +5,6 @@
 
 /**
  * @brief function to set parameters of the analysis and initialize pythia from values specified in the parameter file
- * 
- * @param error_log_name: file name for the log file of the analysis
  */
 void globalAnalysis::initialize_pythia() {
 	
@@ -14,7 +12,7 @@ void globalAnalysis::initialize_pythia() {
   bool switchoffbhadrondecays=true;
   bool D0decay=false;
 
-  std::string preamble;
+  std::string preamble, event_type;
 
  // initialize pythia according to the provided values in paramfile
   while ( _parameter_file >> param_name >> param_value )
@@ -33,31 +31,7 @@ void globalAnalysis::initialize_pythia() {
         }
         else cout << "invalid parameter: process can be 'all' (HardQCDall=on) or 'gg' (gluon-only initial states)." << endl;
       }
-      else if (param_name == "eventSelection:") {
-        if (param_value == "inclusive") {
-          _is_inclusive = true;
-          _file_label = "inc";
-        }
-        else if (param_value == "qq") {
-          _is_inclusive = false;
-          _particle_ids = {constants::DOWN,constants::ANTIDOWN};
-          _mc2 = 0.;
-          _file_label = "qq";
-        }
-        else if (param_value == "cc") {
-          _is_inclusive = false;
-          _particle_ids = {constants::CHARM,constants::ANTICHARM};
-          _file_label = "cc";
-          _mc2 = pow(constants::CHARM_MASS, 2.0);        
-        }
-        else if (param_value == "bb") {
-          _is_inclusive = false;
-          _particle_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
-          _file_label = "bb";
-          _mc2 = pow(constants::BOTTOM_MASS, 2.0); 
-        }
-        else { cout << "parameter eventSelection has the allowed values 'inclusive' (all jets), 'qq' (down-quark tagged jets), 'cc' (charm-tagged jets), or 'bb' (bottom-tagged jets)."; }
-      }
+      else if (param_name == "eventSelection:") event_type = param_value;
       // parameters for physical features in pythia
       else if (param_name == "tune:") _pythia.readString("Tune:pp = "+param_value);
       else if (param_name == "beamidA:") _pythia.readString("Beams:idA = "+param_value);
@@ -115,6 +89,40 @@ void globalAnalysis::initialize_pythia() {
       }
     }
 
+    if (event_type == "inclusive") {
+      _is_inclusive = true;
+      _file_label = "inc";
+    }
+    else if (event_type == "qq") {
+      _is_inclusive = false;
+      if (_is_parton_level) _particle_ids = {constants::DOWN,constants::ANTIDOWN};
+      else cout << "WARNING: hadronization: on and eventSelection: qq are incompatible selections!" << endl;
+      _mc2 = 0.;
+      _file_label = "qq";
+    }
+    else if (event_type == "cc") {
+     _is_inclusive = false;
+     if (_is_parton_level) _particle_ids = {constants::CHARM,constants::ANTICHARM};
+     else {
+      _parton_ids = {constants::CHARM,constants::ANTICHARM};
+      _particle_ids = {constants::D0,constants::D0BAR};
+     }
+      _file_label = "cc";
+      _mc2 = pow(constants::CHARM_MASS, 2.0);        
+    }
+    else if (event_type == "bb") {
+      _is_inclusive = false;
+      if (_is_parton_level) _particle_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
+      else {
+        _parton_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
+        _particle_ids = {constants::B0,constants::B0BAR};
+      }
+      _file_label = "bb";
+      _mc2 = pow(constants::BOTTOM_MASS, 2.0); 
+    }
+    else { cout << "parameter eventSelection has the allowed values 'inclusive' (all jets), 'qq' (down-quark tagged jets), 'cc' (charm-tagged jets), or 'bb' (bottom-tagged jets)."; }
+
+
   _error_log.open("logfile_"+_file_label);
   assert(_error_log.is_open() && "cannot open the specified error log file.");
   _error_log << preamble;
@@ -138,7 +146,7 @@ void globalAnalysis::initialize_pythia() {
     _pythia.readString("555:mayDecay = off");
   }
 	
-  _pythia.init();
+ _pythia.init();
 }
 
 
