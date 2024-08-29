@@ -25,8 +25,8 @@ public:
     }
     if (abs(_bins.back()-max_bin)>1e-10) _bins.push_back(max_bin);
     
-    // initialize values with zeros               
-    _values.resize(_bins.size());
+    // initialize values with zeros. Note that _values is one element longer than _bins, since we keep a bin both for underflow (leftmost) and for overflow (rightmost)              
+    _values.resize(_bins.size()+1);
     std::fill(_values.begin(),_values.end(),0.0);
   }
 
@@ -40,8 +40,8 @@ public:
     }
     if (abs(_bins.back()-max_bin)>1e-10) _bins.push_back(max_bin);
     
-    // initialize values with zeros               
-    _values.resize(_bins.size());
+    // initialize values with zeros. Note that _values is one element longer than _bins, since we keep a bin both for underflow (leftmost) and for overflow (rightmost)               
+    _values.resize(_bins.size()+1);
     std::fill(_values.begin(),_values.end(),0.0);
 
     _outfile.open(filename.c_str());

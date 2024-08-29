@@ -69,11 +69,11 @@ void Histogram::multiply(double multiplier) {
 int Histogram::getbin( double value ){
 
   double set_point, bin_size;
-  set_point = _bins[1]; // minimum values are in place one (so out of bounds can be stored in 0) (same convention as np.digitize)
-  bin_size = _bins[2]-_bins[1];
+  set_point = _bins[0]; // minimum values are in place one (so out of bounds can be stored in 0) (same convention as np.digitize)
+  bin_size = _bins[1]-_bins[0];
   
-  if (value < _bins[1] || isinf(value) || isnan(value) ) return 0;
-  else if (value>=_bins[_bins.size()-2]) return _bins.size()-2;// since bins is 1 element longer than the eec vectors
+  if (value < _bins[0] || isinf(value) || isnan(value) ) return 0; // leftmost underflow bin
+  else if (value>=_bins[_bins.size()-1]) return _values.size()-1;// rightmost overflow bin (note that _values is one element longer than _bins)
   else return int( floor( (value-set_point)/bin_size ) )+1;
 }
 
@@ -83,8 +83,10 @@ int Histogram::getbin( double value ){
 */
 void Histogram::write() {
 
-  for (long unsigned int i=0; i<_values.size(); i++) {
-    _outfile << _bins[i] << ", " << _values[i] << endl;
+  // since _values is one element longer than _bins, write out the lowest value of _bins twice
+  _outfile << _bins[0] << ", " << _values[0] << endl;
+  for (long unsigned int i=1; i<_values.size(); i++) {
+    _outfile << _bins[i-1] << ", " << _values[i] << endl;
   }
 }
 
