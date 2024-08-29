@@ -64,6 +64,6 @@ void Splitting::set_values() {
   _z = get_z(_out1, _out2);
   _dR = _out1.delta_R(_out2);
   _pt = _in.pt();
-  _virt = sqrt( (pow(_kt,2.0) + pow(constants::CHARM_MASS,2.0)) / (_z*(1.0-_z)) );
-  _virt_v2 = (_out1+_out2).m();
+  // _virt = sqrt( (pow(_kt,2.0) + pow(constants::CHARM_MASS,2.0)) / (_z*(1.0-_z)) );
+  _virt = (_out1+_out2).m();
 }
