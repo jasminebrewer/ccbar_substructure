@@ -1,6 +1,7 @@
 #include "Pythia8/Pythia.h"
 #include "fastjet/PseudoJet.hh"
 #include "ccbar_analysis.hh"
+#include "constants.hh"
 #include "histograms.hh"
 #include "fastjet/ClusterSequence.hh"
 
@@ -105,8 +106,6 @@ PseudoJet EventCCbar::follow_to_final_state( PseudoJet particle) {
   int current_index = particle.user_info<ExtraInfo>().global_index(); // event index of the particle
   int pid = particle.user_info<ExtraInfo>().pdg_id(); // its particle id
   Particle& current_particle = _py_event[ current_index ]; // pythia particle associated with that particle
-  
-  //cout << "is parton level: " << _is_parton_level << ", and has pair" << endl;
 
   // while the current particle is not final
   while ( (_is_parton_level && !current_particle.isFinal()) || (!_is_parton_level && !current_particle.isFinalPartonLevel()) ) {
@@ -119,9 +118,9 @@ PseudoJet EventCCbar::follow_to_final_state( PseudoJet particle) {
   }
 
   // if the event is hadron-level, associate the particle with one of the tagged hadrons in the event
-  if (!_is_parton_level) return associate( as_pseudojet(current_particle), _tagged_particles );
+  if (!_is_parton_level) return associate( as_pseudojet(_py_event[current_index]), _tagged_particles );
   // else convert the final particle to a PseudoJet object and return
-  else return as_pseudojet( current_particle );
+  else return as_pseudojet( _py_event[current_index] );
 }
 
 /**

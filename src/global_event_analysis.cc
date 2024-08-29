@@ -1,6 +1,7 @@
 #include <fstream> 
 
 #include "global_event_analysis.hh"
+#include "constants.hh"
 
 
 /**
@@ -102,21 +103,17 @@ void globalAnalysis::initialize_pythia() {
     }
     else if (event_type == "cc") {
      _is_inclusive = false;
+     _parton_ids = {constants::CHARM,constants::ANTICHARM};
      if (_is_parton_level) _particle_ids = {constants::CHARM,constants::ANTICHARM};
-     else {
-      _parton_ids = {constants::CHARM,constants::ANTICHARM};
-      _particle_ids = {constants::D0,constants::D0BAR};
-     }
-      _file_label = "cc";
-      _mc2 = pow(constants::CHARM_MASS, 2.0);        
+     else _particle_ids = {constants::D0,constants::D0BAR};
+     _file_label = "cc";
+     _mc2 = pow(constants::CHARM_MASS, 2.0);        
     }
     else if (event_type == "bb") {
       _is_inclusive = false;
+      _parton_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
       if (_is_parton_level) _particle_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
-      else {
-        _parton_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
-        _particle_ids = {constants::B0,constants::B0BAR};
-      }
+      else _particle_ids = {constants::B0,constants::B0BAR};
       _file_label = "bb";
       _mc2 = pow(constants::BOTTOM_MASS, 2.0); 
     }
