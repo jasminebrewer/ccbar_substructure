@@ -2,7 +2,9 @@
 #include "fastjet/ClusterSequence.hh"
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/contrib/SoftDrop.hh"
+#include "fastjet/contrib/FlavorCone.hh"
 #include "ccbar_analysis.hh"
+// #include "jet_energy_loss.hh"
 #include "complex_Ei.hh"
 #include "histograms.hh"
 #include "medium_mod.hh"
@@ -38,6 +40,15 @@ int main(int argc, char* argv[]) {
   params.qL = analysis._qhatL;
   params.L = analysis._L;
   params.mc2 = analysis._mc2;
+
+  // struct energy_loss_params eloss_params;
+  // eloss_params.qL = analysis._qhatL;
+  // eloss_params.L = analysis._L;
+  // eloss_params.jetR = analysis._jetR;
+  // eloss_params.omega_c = 60.; // GeV
+  // eloss_params.n = 6.;
+  // eloss_params.T = 0.3; // GeV
+  // eloss_params.alpha_med = 0.24;
 
   // set up FastJet jet finder, with specified clustering algorithm, both for jet finding and reclustering 
   JetDefinition jet_def(analysis._jet_algo, analysis._track_cuts.jetR);
@@ -76,11 +87,14 @@ int main(int argc, char* argv[]) {
 
 	if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
 
+
 	// do soft-drop grooming on the jet to remove soft splittings                                                                                                    
 	fastjet::PseudoJet sd_jet = sd(jet);
 
 	// reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
+
+  // estimate_energy_loss(jet, &eloss_params);
 
 	//Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
@@ -101,17 +115,34 @@ int main(int argc, char* argv[]) {
 	evt.do_iterative_reclustering(jet); // recluster the jet
 
 	// for comparison, also include the "splitting" which is just the kinematics of the ccbar pair, without anything fancy
+	// Splitting splitting_cc;
+	// splitting_cc._in = evt._maxpt_tagged_particle+evt._maxpt_tagged_antiparticle;
+	// if (evt._maxpt_tagged_particle.perp() > evt._maxpt_tagged_antiparticle.perp() ) {
+	//   splitting_cc._out1 = evt._maxpt_tagged_particle;
+	//   splitting_cc._out2 = evt._maxpt_tagged_antiparticle;
+	// }
+	// else {
+	//   splitting_cc._out1 = evt._maxpt_tagged_antiparticle;
+	//   splitting_cc._out2 = evt._maxpt_tagged_particle;              
+	// }
+	// splitting_cc.set_values();
+
+  // for comparison, also include the "splitting" from the FlavorCone jet algorithm
 	Splitting splitting_cc;
-	splitting_cc._in = evt._maxpt_tagged_particle+evt._maxpt_tagged_antiparticle;
-	if (evt._maxpt_tagged_particle.perp() > evt._maxpt_tagged_antiparticle.perp() ) {
-	  splitting_cc._out1 = evt._maxpt_tagged_particle;
-	  splitting_cc._out2 = evt._maxpt_tagged_antiparticle;
-	}
-	else {
-	  splitting_cc._out1 = evt._maxpt_tagged_antiparticle;
-	  splitting_cc._out2 = evt._maxpt_tagged_particle;              
-	}
+  std::vector<fastjet::PseudoJet> seeds {evt._maxpt_tagged_particle, evt._maxpt_tagged_antiparticle};
+  double FC_jetR = 0.5 * analysis._track_cuts.jetR;
+  fastjet::contrib::FlavorConePlugin jdf(seeds, FC_jetR);
+  fastjet::ClusterSequence jcs(evt._final_particles, &jdf); 
+  vector<fastjet::PseudoJet> FC_jets = sorted_by_pt( jcs.inclusive_jets(0) ); // note that with two seeds, there are always two jets with the FlavorCone method
+
+// cout << "jet has " << jet.constituents().size() << endl;
+// cout << "FC jet[0] has " << FC_jets[0].constituents().size() << ", FC jet[1] has " << FC_jets[1].constituents().size() << endl;
+
+	splitting_cc._in = (FC_jets[0] + FC_jets[1]);
+	splitting_cc._out1 = FC_jets[0];
+	splitting_cc._out2 = FC_jets[1];
 	splitting_cc.set_values();
+	
 
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
 	params.z = evt._splitting._z;
@@ -119,7 +150,7 @@ int main(int argc, char* argv[]) {
 	params.pt2 = pow(evt._splitting._kt, 2.);
 	med_weight = compute_medium_weight(&params, true); // gauss integration
 
-	analysis._error_log << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << evt._splitting._virt_v2 << ", " << evt._recl_splitting._is_primary << ", " << evt._recl_splitting._level << ", " << evt._recl_splitting._Eg << ", " << evt._recl_splitting._pt << ", " << evt._recl_splitting._kt << ", " << evt._recl_splitting._z << ", " << evt._recl_splitting._dR << ", " << evt._recl_splitting._virt << ", " << evt._recl_splitting._virt_v2 << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << endl;
+	analysis._error_log << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << evt._recl_splitting._is_primary << ", " << evt._recl_splitting._level << ", " << evt._recl_splitting._Eg << ", " << evt._recl_splitting._pt << ", " << evt._recl_splitting._kt << ", " << evt._recl_splitting._z << ", " << evt._recl_splitting._dR << ", " << evt._recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
       }
 
     }// end of jet loop
