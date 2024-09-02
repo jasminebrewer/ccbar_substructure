@@ -10,9 +10,9 @@ CXX = g++
 CXXFLAGS = -Iinclude -I${PYTHIA8_INCLUDE} -I${FASTJET_INCLUDE} -w -O2 -std=c++17 -pedantic -W -Wall -Wshadow -fPIC -pthread
 
 LDFLAGS = -L${PYTHIA8_LIB} -Wl,-rpath,${PYTHIA8_LIB} -L${FASTJET_LIB} -Wl,-rpath,${FASTJET_LIB}
-LDLIBS = -lpythia8 -ldl -lfastjet -lRecursiveTools -lfastjettools -lgsl
+LDLIBS = -lpythia8 -ldl -lfastjet -lRecursiveTools -lFlavorCone -lfastjettools -lgsl
 
-SRCS = src/global_event_analysis.cc src/ccbar_analysis.cc src/EEC.cc src/splitting.cc src/histograms.cc src/medium_mod.cc src/complex_Ei.cc
+SRCS = src/global_event_analysis.cc src/ccbar_analysis.cc src/EEC.cc src/splitting.cc src/histograms.cc src/medium_mod.cc src/complex_Ei.cc src/jet_energy_loss.cc
 OBJS = $(SRCS:src/%.cc=build/%.o)
 
 # Define the two executables and their respective main files

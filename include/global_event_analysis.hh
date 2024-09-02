@@ -11,35 +11,6 @@ using namespace Pythia8;
 using namespace fastjet;
 using namespace std;
 
-namespace constants
-{
-  // identifying particle ids used by pythia
-  const int CHARM = 4;
-  const int ANTICHARM = -4;
-  const int BOTTOM = 5;
-  const int ANTIBOTTOM = -5;
-  const int DOWN = 1;
-  const int ANTIDOWN = -1;
-  const int GLUON = 21;
-  const int D0 = 421;
-  const int D0BAR = -421;
-  const int B0 = 511;
-  const int B0BAR = -511;
-  // particles masses
-  const double CHARM_MASS = 1.27;
-  const double BOTTOM_MASS = 4.18;
-  // status code for particles in pythia
-  const int INCOMING_HARD = -21; // incoming from hard process
-  const int INCOMING_SUB = -31; // incoming from subprocess
-  const int INCOMING_ISR = -41; // incoming from initial state radiation
-  const int OUTGOING_HARD = -23; // outgoing from hard process
-  const int OUTGOING_SUB = -33; // outgoing from subprocess
-  const int OUTGOING_ISR = -43; // outgoing from initial state radiation
-  const int SHOWER = -51; // produced by the shower
-  // unit conversions
-  const double invGeVtofm = 0.1973; // conversion for length units in GeV^{-1} to fermi
-}
-
 
 // object containing track, jet, and heavy flavor cuts and acceptances for all events
 struct trackCuts {
@@ -54,6 +25,8 @@ struct trackCuts {
   double eecMin = -2.5;
   double eecMax = -0.25;
   double eec_bin_size = 0.055;
+  double zcut=0.0;
+  double beta=0.0;
 };
 
 
@@ -91,7 +64,7 @@ public:
   }
 
   // functions
-  void initialize_pythia();
+  void initialize_pythia(int label);
   void declare_histograms(vector<string> histogram_names);
   void normalize_histograms();
   void write_histograms();

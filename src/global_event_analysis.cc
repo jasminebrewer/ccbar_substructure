@@ -7,7 +7,7 @@
 /**
  * @brief function to set parameters of the analysis and initialize pythia from values specified in the parameter file
  */
-void globalAnalysis::initialize_pythia() {
+void globalAnalysis::initialize_pythia(int label) {
 	
   string param_name, param_value;
   bool switchoffbhadrondecays=true;
@@ -72,6 +72,9 @@ void globalAnalysis::initialize_pythia() {
 	else if (param_value=="false") D0decay = false;
 	else cout << "invalid parameter: D0decays should be true or false" << endl;		
       }
+      // softdrop parameters
+      else if (param_name == "zcut:") _track_cuts.zcut = stof(param_value);
+      else if (param_name == "beta:") _track_cuts.beta = stof(param_value);
       // medium parameters
       else if (param_name == "qhatL:") _qhatL = stof(param_value);
       else if (param_name == "L:") _L = stof(param_value) / constants::invGeVtofm;
@@ -90,7 +93,7 @@ void globalAnalysis::initialize_pythia() {
       }
     }
 
-    if (event_type == "inclusive") {
+    if (event_type == "inclusive" || event_type=="inc") {
       _is_inclusive = true;
       _file_label = "inc";
     }
@@ -120,7 +123,7 @@ void globalAnalysis::initialize_pythia() {
     else { cout << "parameter eventSelection has the allowed values 'inclusive' (all jets), 'qq' (down-quark tagged jets), 'cc' (charm-tagged jets), or 'bb' (bottom-tagged jets)."; }
 
 
-  _error_log.open("logfile_"+_file_label);
+  _error_log.open("logfile_"+_file_label+to_string(label));
   assert(_error_log.is_open() && "cannot open the specified error log file.");
   _error_log << preamble;
  

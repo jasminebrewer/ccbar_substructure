@@ -1,4 +1,5 @@
 #include "complex_Ei.hh"
+#include "constants.hh"
 #include <complex>
 #include <boost/math/quadrature/tanh_sinh.hpp>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
@@ -12,9 +13,7 @@ struct splitting_params {double z; double Eg; double mc2; double pt2; double qL;
 
 /* three helper functions to compute quantities used by the integrand function */
 double c(double z) {
-  double CA = 3.;
-  double CF = 4./3.;
-  return 1. - (CA/CF)*z*(1.-z);
+  return 1. - (constants::CA/constants::CF)*z*(1.-z);
 }
 
 std::complex<double> compute_omega(double eg, double z) { return sqrt(c(z) / (eg*z*(1.-z)*i) );}

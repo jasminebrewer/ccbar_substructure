@@ -13,12 +13,17 @@ cp ${2} ${RUN_DIR}/${2}
 
 cd ${RUN_DIR}
 
-if [ ${1}=="substructure" ]
-then
-    ${BUILD_DIR}/compute_substructure ${2}
-#    addqueue -c "4 hours" ${BUILD_DIR}/compute_substructure ${2}
-elif [ ${1}=="EEC" ]
-then
-    ${BUILD_DIR}/compute_EEC ${2}
-#    addqueue -c "4 hours" ${BUILD_DIR}/compute_EEC ${2}
-fi
+addqueue -c "1 day" ${BUILD_DIR}/compute_substructure ${2} 1
+
+# for VARIABLE in 1 2 3 4 5 .. 10
+# do
+#     addqueue -c "1 day" ${BUILD_DIR}/compute_EEC ${2} $VARIABLE
+# done
+
+#addqueue -c "1 day" ${BUILD_DIR}/compute_substructure ${2}
+
+# if [ "${1}"=="substructure" ]; then
+#     addqueue -c "4 hours" ${BUILD_DIR}/compute_substructure ${2}
+# elif [ "${1}"=="EEC" ]; then
+#     addqueue -c "4 hours" ${BUILD_DIR}/compute_EEC ${2}
+# fi

@@ -23,7 +23,7 @@ bool contains(fastjet::PseudoJet& jet, fastjet::PseudoJet particle);
 
 int main(int argc, char* argv[]) {
 
-  if (argc!=2) {
+  if (argc!=3) {
     cout << "Incorrect number of command line arguments -- command line argument should be the name of a parameter file" << endl;
     return -1;
   }
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   // Generator. Process selection. 
   Pythia pythia;
   globalAnalysis analysis(pythia, static_cast<std::string>(argv[1]));
-  analysis.initialize_pythia();
+  analysis.initialize_pythia(stoi(argv[2]));
 
   vector<std::string> histogram_names {"eec2_all", "eec2_part", "eec3_all", "eec3_part", "eec2_med_all", "eec2_med_part", "eec3_med_all", "eec3_med_part"};
   analysis.declare_histograms(histogram_names);
@@ -50,6 +50,10 @@ int main(int argc, char* argv[]) {
 
   bool found_splitting;
   double med_weight=0.;
+
+  // track total number of jets, and total number of ccbar-tagged jets
+  int Njets=0;
+  int NHFjets=0;
   
   // Begin event loop
   for (int iEvent = 0; iEvent < analysis._n_events; ++iEvent) {
@@ -67,15 +71,21 @@ int main(int argc, char* argv[]) {
     // if not inclusive, consider up to two jets that pass the cuts and consider the one that has at least one pair of particles with the indices of tagged particles
     evt.cluster_jets();
 
+    //cout << "num jets: " << evt._jets.size() << endl;
+
     if (evt._jets.size()==0) continue; // event has no jets passing the selections
         
     for (auto jet: evt._jets) {
+
+      Njets++;
 
       if (!analysis._is_inclusive) {
 
 	if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
 
-  //Splitting hardest_split = evt.find_hardest_splitting(jet);
+	NHFjets++;
+
+	//Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
 
 	// evt.find_splitting();
@@ -88,7 +98,7 @@ int main(int argc, char* argv[]) {
 
 	// make sure the jet contains these particles as well
 	if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
-  
+
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
 	params.z = evt._splitting._z;
 	params.Eg = evt._splitting._Eg;
@@ -125,8 +135,9 @@ int main(int argc, char* argv[]) {
 
   analysis.normalize_histograms();
 
-
   analysis.write_histograms();
+
+  analysis._error_log << "number of jets: " << Njets << ", number of HF jets: " << NHFjets << endl;
 
   return 0;
 }
