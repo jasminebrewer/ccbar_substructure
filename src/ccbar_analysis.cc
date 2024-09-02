@@ -333,9 +333,11 @@ void EventCCbar::calculate_splitting_level() {
  * reclusters a jet iteratively into subjets until the first occasion where the maximum pt particle and antiparticle are split into separate subjets.
  * According to the reclustering logic, this is the reclustered splitting. Set values of _recl_splitting.
  */
-void EventCCbar::do_iterative_reclustering(PseudoJet jet) { 
+Splitting EventCCbar::do_iterative_reclustering(PseudoJet jet) { 
 
   assert( (contains(jet, _maxpt_tagged_particle) && contains(jet, _maxpt_tagged_antiparticle)) && "jet is expected to contain both the highest pt particle and antiparticle" );
+
+  Splitting recl_splitting;
 
   vector<PseudoJet> jet_constituents = jet.constituents();
   ClusterSequence reclustering(jet_constituents, _jet_def_recl);
@@ -345,7 +347,7 @@ void EventCCbar::do_iterative_reclustering(PseudoJet jet) {
   bool jet1_contains_particle, jet1_contains_antiparticle, jet2_contains_particle, jet2_contains_antiparticle;
   
   int level=0;
-  _recl_splitting._is_primary=true;
+  recl_splitting._is_primary=true;
   while (reclustered_jet.has_parents( subjet_1, subjet_2)) {
 
     jet1_contains_particle = contains(subjet_1, _maxpt_tagged_particle);
@@ -362,13 +364,13 @@ void EventCCbar::do_iterative_reclustering(PseudoJet jet) {
 
     // if the subjet that contains both particles is the softer one at ANY splitting in the reclustering, the ccbar pair is not in the primary Lund plane
     if ( jet1_contains_particle && jet1_contains_antiparticle ) { // subjet 1 contains both charm and anticharm
-      if (subjet_1.perp() < subjet_2.perp()) _recl_splitting._is_primary = false;
+      if (subjet_1.perp() < subjet_2.perp()) recl_splitting._is_primary = false;
       // if (subjet_2.perp() > 0.2*reclustered_jet.perp()) _recl_splitting._is_primary = false; // if the jet without the ccbar is too hard, reject
       reclustered_jet = subjet_1; // reiterate with the subjet that contains both particles 
     }
     // same as above except for the case that both charms are in subjet 2
     else if ( jet2_contains_particle && jet2_contains_antiparticle ) {
-      if (subjet_2.perp() < subjet_1.perp()) _recl_splitting._is_primary = false;
+      if (subjet_2.perp() < subjet_1.perp()) recl_splitting._is_primary = false;
       // if (subjet_1.perp() > 0.2*reclustered_jet.perp()) _recl_splitting._is_primary = false; // if the jet without the ccbar is too hard, reject
       reclustered_jet = subjet_2;
     }                                           
@@ -377,11 +379,12 @@ void EventCCbar::do_iterative_reclustering(PseudoJet jet) {
   // now that each subjet contains on of the particles in tagged_list, define subjet 1 to be the higher pt one
   if ( subjet_2.perp()>subjet_1.perp() ) swap( subjet_1, subjet_2 );
 
-  _recl_splitting._level = level;
-  _recl_splitting._in = reclustered_jet;
-  _recl_splitting._out1 = subjet_1;
-  _recl_splitting._out2 = subjet_2;
-  _recl_splitting.set_values();
+  recl_splitting._level = level;
+  recl_splitting._in = reclustered_jet;
+  recl_splitting._out1 = subjet_1;
+  recl_splitting._out2 = subjet_2;
+  recl_splitting.set_values();
+  return recl_splitting;
 }
 
 

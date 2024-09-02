@@ -29,7 +29,7 @@ public:
   bool find_splitting_v2(PseudoJet jet, double jetR);
   void calculate_splitting_level();
   PseudoJet follow_to_final_state(PseudoJet particle);
-  void do_iterative_reclustering(PseudoJet jet);
+  Splitting do_iterative_reclustering(PseudoJet jet);
   // function to compute the 2-point energy correlator between particles1 and particles2
   Histogram EEC2(vector<PseudoJet> particles1, vector<PseudoJet> particles2, double pT_scale);
   // function to compute the 3-point energy correlator between particles1, particles2, and particles3

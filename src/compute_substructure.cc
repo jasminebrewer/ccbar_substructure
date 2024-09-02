@@ -63,6 +63,8 @@ int main(int argc, char* argv[]) {
   bool found_splitting;
   double med_weight=0.;
   double quenching_weight;
+
+  Splitting recl_splitting, mod_recl_splitting;
   
   // Begin event loop
   for (int iEvent = 0; iEvent < analysis._n_events; ++iEvent) {
@@ -84,9 +86,14 @@ int main(int argc, char* argv[]) {
         
     for (auto jet: evt._jets) {
 
-      quenching_weight = estimate_energy_loss(jet, &eloss_params);
-//cout << jet.perp() << ", " << quenching_weight << endl;
-analysis._error_log << jet.perp() << ", " << quenching_weight << endl;
+      vector<PseudoJet> modified_jet_particles = compute_jet_modification(jet, &eloss_params);
+
+      JetDefinition mod_jet_def(antikt_algorithm, 5.0*analysis._track_cuts.jetR); // make a very large jet to make sure to cluster all of the particles
+      ClusterSequence mod_cs(modified_jet_particles, mod_jet_def);
+      vector<PseudoJet> mod_jets = sorted_by_pt(mod_cs.inclusive_jets(0.0));
+      PseudoJet modified_jet = mod_jets[0];
+
+      if (analysis._is_inclusive) analysis._error_log << jet.perp() << ", " << modified_jet.perp() << endl;
 
       if (!analysis._is_inclusive) {
 
@@ -98,9 +105,6 @@ analysis._error_log << jet.perp() << ", " << quenching_weight << endl;
 
 	// reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
-
-  quenching_weight = estimate_energy_loss(jet, &eloss_params);
-  analysis._error_log << jet.perp() << ", " << quenching_weight << endl;
 
 	//Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
@@ -118,7 +122,8 @@ analysis._error_log << jet.perp() << ", " << quenching_weight << endl;
 
 	evt.calculate_splitting_level(); // calculate the level of the splitting found above
 
-	evt.do_iterative_reclustering(jet); // recluster the jet
+	recl_splitting = evt.do_iterative_reclustering(jet); // recluster the jet
+  mod_recl_splitting = evt.do_iterative_reclustering(modified_jet); // recluster the jet
 
 	// for comparison, also include the "splitting" which is just the kinematics of the ccbar pair, without anything fancy
 	// Splitting splitting_cc;
@@ -153,7 +158,7 @@ analysis._error_log << jet.perp() << ", " << quenching_weight << endl;
 	params.pt2 = pow(evt._splitting._kt, 2.);
 	med_weight = compute_medium_weight(&params, true); // gauss integration
 
-	analysis._error_log << med_weight << ", " << quenching_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << evt._recl_splitting._is_primary << ", " << evt._recl_splitting._level << ", " << evt._recl_splitting._Eg << ", " << evt._recl_splitting._pt << ", " << evt._recl_splitting._kt << ", " << evt._recl_splitting._z << ", " << evt._recl_splitting._dR << ", " << evt._recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
+	analysis._error_log << jet.perp() << ", " << modified_jet.perp() << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << mod_recl_splitting._level << ", " << mod_recl_splitting._Eg << ", " << mod_recl_splitting._pt << ", " << mod_recl_splitting._kt << ", " << mod_recl_splitting._z << ", " << mod_recl_splitting._dR << ", " << mod_recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
       }
 
     }// end of jet loop

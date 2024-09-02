@@ -37,6 +37,14 @@ int reduce_flavor( int flavor1, int flavor2 ) {
 }
 
 
+PseudoJet scaleMomentum(PseudoJet particle, double scale) {
+  double new_energy = scale * (particle.px()*particle.px() + particle.py()*particle.py() + particle.pz()*particle.pz() ) + particle.m()*particle.m();
+  PseudoJet new_particle = PseudoJet(scale*particle.px(), scale*particle.py(), scale*particle.pz(), new_energy);
+  new_particle.set_user_info(new ExtraInfo(particle.user_info<ExtraInfo>().pdg_id(), particle.user_info<ExtraInfo>().global_index()));
+  return new_particle;
+}
+
+
 std::vector<int> remove_pairs(const std::vector<int>& input) {
 
     vector<int> unpaired_values;
@@ -130,13 +138,14 @@ double compute_quenching_weight(int flavor, double pT, void * p) {
     return Q_minijet * Q_pert;
 }
 
-double estimate_energy_loss( PseudoJet jet, void * p ) {
+vector<PseudoJet> compute_jet_modification( PseudoJet jet, void * p ) {
 
     // retrieve energy loss parameters
     struct energy_loss_params * params = (struct energy_loss_params *)p;
     double qhatL = params->qL;
     double L = params->L;
     double theta_c = 2. / sqrt( qhatL*L*L );
+    double jetR = params->jetR;
 
     // cluster particles into groups depending on which ones are closer to each other than the medium resolution length
     // can maybe use the fastjet clustering algorithm for this purpose...?
@@ -144,24 +153,26 @@ double estimate_energy_loss( PseudoJet jet, void * p ) {
     JetDefinition mini_jet_def(kt_algorithm, theta_c);
     ClusterSequence cs(jet_constituents, mini_jet_def);
     vector<PseudoJet> mini_jets = (cs.inclusive_jets(0.0));  // get all clusters with radius theta_c
-    
-    double total_quenching_weight = 0.;
+    vector<PseudoJet> modified_jet;
+
+    double quenching_weight = 0.;
     for (auto cluster: mini_jets) {
         vector<int> flavors;
         int final_flavor;
-        //cout << "cluster size: " << cluster.constituents().size() << endl;
-        //if (cluster.constituents().size()>1) cout << "cluster has " << cluster.constituents().size() << " particles and they have flavors ";
-        for (auto c: cluster.constituents()) {
-            //if (cluster.constituents().size()>1) cout << p.user_info<ExtraInfo>().pdg_id() << ", ";
-            flavors.push_back(c.user_info<ExtraInfo>().pdg_id());
-        }
+
+        for (auto c: cluster.constituents()) flavors.push_back(c.user_info<ExtraInfo>().pdg_id());
         final_flavor = compute_flavor(flavors);
 
         // compute the quenching weight of the cluster
-        total_quenching_weight += compute_quenching_weight(final_flavor, cluster.perp(), p) * cluster.perp();
+        quenching_weight = compute_quenching_weight(final_flavor, cluster.perp(), p);
 
+        for (auto c: cluster.constituents()) {
+            modified_jet.push_back( scaleMomentum(c, quenching_weight) );
+        }
     }
 
-    return total_quenching_weight;
+    // cout << "total quenching weight: " << total_quenching_weight << ", from modified jet: " << mod_jets[0].perp() << endl;
+
+    return modified_jet;
 
 }
