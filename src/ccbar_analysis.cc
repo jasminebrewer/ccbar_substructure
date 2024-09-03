@@ -138,16 +138,17 @@ void EventCCbar::read_event() {
   // loop over all particles in the event
   for (Particle& p: _py_event) {
 
-    // if hadronization is on, store tagged particles at parton-level to associate them later with the tagged hadrons
+    // perform cuts to remove particles that would have gone out of the detector
+    if (p.pT() < _track_cuts.trackPtMin) continue;
+    if (abs(p.eta()) > _track_cuts.trackEtaCut) continue;
+
+        // if hadronization is on, store tagged particles at parton-level to associate them later with the tagged hadrons
     if (!_is_parton_level && p.isFinalPartonLevel()) {
-      if (is_contained(p.id(), _parton_ids)) _tagged_partons.push_back( PseudoJet(p.px(), p.py(), p.pz(), p.e()) );
+      if (is_contained(p.id(), _parton_ids) && p.pT()>_track_cuts.HFPtMin) _tagged_partons.push_back( PseudoJet(p.px(), p.py(), p.pz(), p.e()) );
     }
 
     if (!p.isFinal()) continue; // otherwise, consider only final states
 
-    // perform cuts to remove particles that would have gone out of the detector
-    if (p.pT() < _track_cuts.trackPtMin) continue;
-    if (abs(p.eta()) > _track_cuts.trackEtaCut) continue;
     
     PseudoJet particle( p.px(), p.py(), p.pz(), p.e() );
     

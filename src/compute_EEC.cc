@@ -7,6 +7,7 @@
 #include "complex_Ei.hh"
 #include "histograms.hh"
 #include "medium_mod.hh"
+#include "jet_energy_loss.hh"
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -51,9 +52,20 @@ int main(int argc, char* argv[]) {
   bool found_splitting;
   double med_weight=0.;
 
+  struct energy_loss_params eloss_params;
+  eloss_params.qL = analysis._qhatL;
+  eloss_params.L = analysis._L;
+  eloss_params.jetR = analysis._track_cuts.jetR;
+  eloss_params.omega_c = 60.; // GeV
+  eloss_params.n = 6.;
+  eloss_params.T = 0.3; // GeV
+  eloss_params.alpha_med = 0.1;
+
   // track total number of jets, and total number of ccbar-tagged jets
   int Njets=0;
   int NHFjets=0;
+
+  bool jets_lose_energy = true;
   
   // Begin event loop
   for (int iEvent = 0; iEvent < analysis._n_events; ++iEvent) {
@@ -78,6 +90,19 @@ int main(int argc, char* argv[]) {
     for (auto jet: evt._jets) {
 
       Njets++;
+
+      if (jets_lose_energy) {
+      
+        vector<PseudoJet> modified_jet_particles = compute_jet_modification(jet, &eloss_params);
+
+        JetDefinition mod_jet_def(antikt_algorithm, 5.0*analysis._track_cuts.jetR); // make a very large jet to make sure to cluster all of the particles
+        ClusterSequence mod_cs(modified_jet_particles, mod_jet_def);
+        vector<PseudoJet> mod_jets = sorted_by_pt(mod_cs.inclusive_jets(0.0));
+        PseudoJet modified_jet = mod_jets[0];
+      }
+
+      //if (analysis._is_inclusive) analysis._error_log << jet.perp() << ", " << modified_jet.perp() << endl;
+
 
       if (!analysis._is_inclusive) {
 

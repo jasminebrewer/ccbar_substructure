@@ -38,7 +38,8 @@ int reduce_flavor( int flavor1, int flavor2 ) {
 
 
 PseudoJet scaleMomentum(PseudoJet particle, double scale) {
-  double new_energy = scale * (particle.px()*particle.px() + particle.py()*particle.py() + particle.pz()*particle.pz() ) + particle.m()*particle.m();
+  double new_p2 = pow(scale, 2.) * (particle.px()*particle.px() + particle.py()*particle.py() + particle.pz()*particle.pz());
+  double new_energy = sqrt( new_p2 + particle.m()*particle.m() );
   PseudoJet new_particle = PseudoJet(scale*particle.px(), scale*particle.py(), scale*particle.pz(), new_energy);
   new_particle.set_user_info(new ExtraInfo(particle.user_info<ExtraInfo>().pdg_id(), particle.user_info<ExtraInfo>().global_index()));
   return new_particle;

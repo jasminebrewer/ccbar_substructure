@@ -15,7 +15,7 @@ cd ${RUN_DIR}
 
 addqueue -c "1 day" ${BUILD_DIR}/compute_substructure ${2} 1
 
-# for VARIABLE in 1 2 3 4 5 .. 10
+# for VARIABLE in 1 2 3 4 5 6 7 8 9
 # do
 #     addqueue -c "1 day" ${BUILD_DIR}/compute_EEC ${2} $VARIABLE
 # done

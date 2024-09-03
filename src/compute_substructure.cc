@@ -103,6 +103,8 @@ int main(int argc, char* argv[]) {
 	// do soft-drop grooming on the jet to remove soft splittings                                                                                                    
 	fastjet::PseudoJet sd_jet = sd(jet);
 
+  // cout << "track cut: " << analysis._track_cuts.HFPtMin << ", maxpts: " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << endl;
+
 	// reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
 
@@ -158,7 +160,8 @@ int main(int argc, char* argv[]) {
 	params.pt2 = pow(evt._splitting._kt, 2.);
 	med_weight = compute_medium_weight(&params, true); // gauss integration
 
-	analysis._error_log << jet.perp() << ", " << modified_jet.perp() << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << mod_recl_splitting._level << ", " << mod_recl_splitting._Eg << ", " << mod_recl_splitting._pt << ", " << mod_recl_splitting._kt << ", " << mod_recl_splitting._z << ", " << mod_recl_splitting._dR << ", " << mod_recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
+  //	analysis._error_log << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
+  analysis._error_log << jet.perp() << ", " << modified_jet.perp() << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << mod_recl_splitting._level << ", " << mod_recl_splitting._Eg << ", " << mod_recl_splitting._pt << ", " << mod_recl_splitting._kt << ", " << mod_recl_splitting._z << ", " << mod_recl_splitting._dR << ", " << mod_recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
       }
 
     }// end of jet loop
