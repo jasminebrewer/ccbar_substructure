@@ -5,6 +5,7 @@
 #include "fastjet/PseudoJet.hh"
 #include "Pythia8/Pythia.h"
 #include "histograms.hh"
+#include "constants.hh"
 #include <map>
 
 using namespace Pythia8;
@@ -27,6 +28,17 @@ struct trackCuts {
   double eec_bin_size = 0.055;
   double zcut=0.0;
   double beta=0.0;
+};
+
+struct mediumParams {
+  double qL = 4.0;
+  double L = 4.0 / constants::invGeVtofm;
+  double omega_c = 60.; // GeV
+  double n = 6.; // power law for the spectrum
+  double T = 0.3; // temperature; GeV
+  double alpha_med = 0.1; // medium coupling
+  double mc2; // squared quark mass
+  double jetR;
 };
 
 
@@ -55,7 +67,7 @@ class globalAnalysis {
 public:
   // copy constructor
   globalAnalysis(globalAnalysis& analysis) : _pythia(analysis._pythia), _jet_algo(analysis._jet_algo), _jet_recl_algo(analysis._jet_recl_algo), _track_cuts(analysis._track_cuts), _is_parton_level(analysis._is_parton_level), _is_inclusive(analysis._is_inclusive),
-					     _particle_ids(analysis._particle_ids), _parton_ids(analysis._parton_ids), _qhatL(analysis._qhatL), _L(analysis._L), _mc2(analysis._mc2) {}
+					     _particle_ids(analysis._particle_ids), _parton_ids(analysis._parton_ids), _medium_params(analysis._medium_params), _do_energy_loss(analysis._do_energy_loss) {}
 
   // constructor a globalAnalysis instance from a pythia event and associated parameter file
   globalAnalysis(Pythia& pythia, string paramfile_name) : _pythia(pythia) {
@@ -79,20 +91,18 @@ public:
 
   JetAlgorithm _jet_algo;               // algorithm for the jet clustering
   JetAlgorithm _jet_recl_algo;          // algorithm for the reclustering step
+  string _FC_mode;                      // string specifying the type of flavor cone method to use
 
   trackCuts _track_cuts;                // struct containing kinematic cuts for the analysis
+  mediumParams _medium_params;          // struct containing parameters for the medium modification
 
+  bool _do_energy_loss;                 // flag for whether to compute jet energy loss
   bool _is_parton_level;                // flag for whether the event is parton- or hadron-level
   bool _is_inclusive;                   // whether to tag particular particles in the event or consider all equally. If false, particle_ids should not be empty
   vector<int> _particle_ids;            // particle ids of particles to tag (e.g., c and cbar)
   vector<int> _parton_ids;              // for the case that hadronization is on, also set the ids of associated partons
 
   map<string, Histogram> _histograms;   // histogram object and a string handle used internally to identify each histogram
-
-  // global parameters for splittings and their medium modification
-  double _qhatL;        // strength of the medium interaction (qhat) times length
-  double _L;            // length of the medium
-  double _mc2;          // quark mass
 
 };
 

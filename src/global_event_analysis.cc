@@ -1,96 +1,139 @@
 #include <fstream> 
-
 #include "global_event_analysis.hh"
 #include "constants.hh"
-
+#include <boost/property_tree/ptree.hpp> // used for processing ini initialization files
+#include <boost/property_tree/ini_parser.hpp>
 
 /**
  * @brief function to set parameters of the analysis and initialize pythia from values specified in the parameter file
  */
 void globalAnalysis::initialize_pythia(int label) {
-	
-  string param_name, param_value;
-  bool switchoffbhadrondecays=true;
-  bool D0decay=false;
 
-  std::string preamble, event_type;
+    boost::property_tree::ptree tree;
+    boost::property_tree::ini_parser::read_ini(_parameter_file, tree);
 
- // initialize pythia according to the provided values in paramfile
-  while ( _parameter_file >> param_name >> param_value )
-    {
-      // save parameters to prepend to log file
-      preamble.append( "# " + param_name + param_value + '\n' );
-      if (param_name == "maxneventsperjob:") {
-	      _n_events = stoi(param_value);
-	      _pythia.readString("Main:numberOfEvents = "+param_value);
+    //* load parameters for the pythia generation *//
+
+    _n_events = tree.get<int>("pythia.maxneventsperjob", 10000);
+    _pythia.readString("Main:numberOfEvents = "+to_string(_n_events));
+
+    set<string> allowed_processes = {"all", "gg"};  
+    string process = tree.get<string>("selection.process", "all");
+    if (allowed_processes.find(process) == allowed_processes.end()) {
+        throw invalid_argument("Invalid process specified: " + process);
+    }
+    if (process == "all") _pythia.readString("HardQCD:all = on");
+    else if (process == "gg") {
+      _pythia.readString("HardQCD:gg2gg = on");
+      _pythia.readString("HardQCD:qqbar2gg = on");
+    }
+
+    _pythia.readString("Tune:pp = "+to_string(tree.get<int>("pythia.tune", 14))); // default tune: Monash
+    _pythia.readString("Beams:idA = "+to_string(tree.get<int>("pythia.beamidA", 2212))); // default beam particles: protons
+    _pythia.readString("Beams:idB = "+to_string(tree.get<int>("pythia.beamidB", 2212)));
+    _pythia.readString("Beams:eCM = "+to_string(tree.get<double>("pythia.eCM", 7000.))); // default center-of-mass energy: 7 TeV
+    _pythia.readString("PhaseSpace:pTHatMin = "+to_string(tree.get<double>("pythia.pTHatMin", 100.))); // default minimum pt of generation: 100 GeV
+    
+    // by default, ISR, FSR, and MPI are all on
+    if (!tree.get<bool>("pythia.ISR", true)) _pythia.readString("PartonLevel:ISR = off");
+    else _pythia.readString("PartonLevel:ISR = on");
+    if (!tree.get<bool>("pythia.FSR", true)) _pythia.readString("PartonLevel:FSR = off");
+    else _pythia.readString("PartonLevel:FSR = on");    
+    if (!tree.get<bool>("pythia.MPI", true)) _pythia.readString("PartonLevel:MPI = off");
+    else _pythia.readString("PartonLevel:MPI = on");
+
+    // by default, pythia generation takes a new seed for each run from the clock time
+    if (tree.get<bool>("pythia.random", true)) {
+      _pythia.readString("Random:setSeed = on");
+      _pythia.readString("Random:seed = 0"); 
+    }
+
+    _is_parton_level = ! tree.get<bool>("pythia.hadronization", true);
+    if (_is_parton_level) {
+      _pythia.readString("HadronLevel:all = off");
+    }
+    else {
+      _pythia.readString("HadronLevel:all = on"); // turn on hadronization
+      // read through other flags that are specific to hadron-level events, about decays of various hadrons
+      // by default, D0 doesn't decay:
+      if (tree.get<bool>("pythia.switchoffD0decay", true)) _pythia.readString(to_string(constants::D0)+":mayDecay = off");
+      // by default, B hadrons don't decay:
+      if (tree.get<bool>("pythia.switchoffbhadrondecays", true)) {
+        _pythia.readString("511:mayDecay = off");
+        _pythia.readString("521:mayDecay = off");
+        _pythia.readString("523:mayDecay = off");
+        _pythia.readString("513:mayDecay = off");
+        _pythia.readString("531:mayDecay = off");
+        _pythia.readString("533:mayDecay = off");
+        _pythia.readString("5232:mayDecay = off");
+        _pythia.readString("5122:mayDecay = off");
+        _pythia.readString("555:mayDecay = off");
       }
-      else if (param_name == "process:") {
-        if (param_value == "all") _pythia.readString("HardQCD:all = on");
-        else if (param_value == "gg") {
-          _pythia.readString("HardQCD:gg2gg = on");
-          _pythia.readString("HardQCD:qqbar2gg = on");
-        }
-        else cout << "invalid parameter: process can be 'all' (HardQCDall=on) or 'gg' (gluon-only initial states)." << endl;
+    }
+
+    //* parameters for the event selection *//
+    // track selections
+    _track_cuts.trackPtMin = tree.get<double>("selections.trackPtMin", 0.0);
+    _track_cuts.trackEtaCut = tree.get<double>("selections.trackEtaCut", 10.0);
+    _track_cuts.HFPtMin = tree.get<double>("selections.HFPtMin", 0.0);
+    // jet selections
+    _track_cuts.jetR = tree.get<double>("selections.jetR", 0.4); // default jet radius is 0.4
+    _track_cuts.JetPtMin = tree.get<double>("selections.JetPtMin", 100.0);
+    _track_cuts.JetPtMax = tree.get<double>("selections.JetPtMax", 1.e10);
+    _track_cuts.JetEtaMin = tree.get<double>("selections.JetEtaMin", -2.0);
+    _track_cuts.JetEtaMax = tree.get<double>("selections.JetEtaMax", 2.0);
+    // soft drop parameters
+    _track_cuts.zcut = tree.get<double>("selections.zcut", 0.0); // by default, softdrop parameters are zero, so there is no softdrop
+    _track_cuts.beta = tree.get<double>("selections.beta", 0.0);
+
+    // jet algorithms
+    set<string> allowed_jet_algorithms = {"kt", "antikt", "CA"};
+    string jet_algorithm = tree.get<string>("selections.jetAlgorithm", "antikt"); // default jet algorithm: antikt
+    if (allowed_jet_algorithms.find(jet_algorithm) == allowed_jet_algorithms.end()) {
+        throw invalid_argument("Invalid jet algorithm specified: " + jet_algorithm);
+    }
+    if (jet_algorithm=="antikt") _jet_algo = fastjet::antikt_algorithm;
+    else if (jet_algorithm=="kt") _jet_algo = fastjet::kt_algorithm;
+    else if (jet_algorithm=="CA") _jet_algo = fastjet::cambridge_algorithm;
+
+    string jet_recl_algorithm = tree.get<string>("selections.jetReclAlgorithm", "CA"); // default jet reclustering algorithm: CA
+    if (allowed_jet_algorithms.find(jet_recl_algorithm) == allowed_jet_algorithms.end()) {
+        throw invalid_argument("Invalid jet reclustering algorithm specified: " + jet_recl_algorithm);
+    }
+    if (jet_recl_algorithm=="antikt") _jet_recl_algo = fastjet::antikt_algorithm;
+    else if (jet_recl_algorithm=="kt") _jet_recl_algo = fastjet::kt_algorithm;
+    else if (jet_recl_algorithm=="CA") _jet_recl_algo = fastjet::cambridge_algorithm;
+
+    set<string> allowed_FC_modes = {"bare", "standard", "HFradius"};
+    _FC_mode = tree.get<string>("selections.FCmode", "bare");
+    if (allowed_FC_modes.find(_FC_mode) == allowed_FC_modes.end()) {
+        throw invalid_argument("Invalid mode specified for Flavor Cone: " + _FC_mode);
+    }
+
+    //* parameters for the medium modification *//
+    bool do_medium_mod = tree.get<bool>("medium.doMediumModification", false);
+    if (do_medium_mod) { // read parameters for the medium modification
+      _medium_params.qL = tree.get<double>("medium.qhatL", 4.0);
+      _medium_params.L = tree.get<double>("medium.L", 4.0) / constants::invGeVtofm; // converts value provided in fm into GeV^-1
+
+      _do_energy_loss = tree.get<bool>("medium.doEnergyLoss", false);
+      if (_do_energy_loss) { // if you are going to do energy loss, read the extra necessary parameters
+
+        if (!_is_parton_level) throw invalid_argument("Invalid parameter selection: energy loss is currently only possible for parton-level events!");
+
+        _medium_params.omega_c = tree.get<double>("medium.omegac", 60.);
+        _medium_params.n = tree.get<double>("medium.n", 6.);
+        _medium_params.T = tree.get<double>("medium.T", 0.3);
+        _medium_params.alpha_med = tree.get<double>("medium.alphaMed", 0.1);
+        _medium_params.jetR = _track_cuts.jetR; // jetR is also needed for the medium analysis
       }
-      else if (param_name == "eventSelection:") event_type = param_value;
-      // parameters for physical features in pythia
-      else if (param_name == "tune:") _pythia.readString("Tune:pp = "+param_value);
-      else if (param_name == "beamidA:") _pythia.readString("Beams:idA = "+param_value);
-      else if (param_name == "beamidB:") _pythia.readString("Beams:idB = "+param_value);
-      else if (param_name == "eCM:") _pythia.readString("Beams:eCM = "+param_value);
-      else if (param_name == "pTHatMin:") _pythia.readString("PhaseSpace:pTHatMin = "+param_value);
-      else if (param_name == "ISR:") _pythia.readString("PartonLevel:ISR = "+param_value);
-      else if (param_name == "MPI:") _pythia.readString("PartonLevel:MPI = "+param_value);
-      else if (param_name == "FSR:") _pythia.readString("PartonLevel:FSR = "+param_value);	
-      // parameters to specify analysis cuts
-      else if (param_name == "jetR:") _track_cuts.jetR = stof(param_value);
-      else if (param_name == "trackPtMin:") _track_cuts.trackPtMin = stof(param_value);
-      else if (param_name == "trackEtaCut:") {
-        _track_cuts.trackEtaCut = stof(param_value);
-      }
-      else if (param_name == "HFPtMin:") _track_cuts.HFPtMin = stof(param_value);
-      else if (param_name == "jetPtMin:") _track_cuts.JetPtMin = stof(param_value);
-      else if (param_name == "jetPtMax:") _track_cuts.JetPtMax = stof(param_value);
-      else if (param_name == "jetEtaMin:") _track_cuts.JetEtaMin = stof(param_value);
-      else if (param_name == "jetEtaMax:") _track_cuts.JetEtaMax = stof(param_value);
-      // hadronization and hadron decays
-      else if (param_name == "hadronization:") {
-        if (param_value=="off") {
-          _pythia.readString("HadronLevel:all = off");
-          _is_parton_level = true; }
-        else if (param_value=="on") {
-          _pythia.readString("HadronLevel:all = on");
-          _is_parton_level = false; }
-      }
-      else if (param_name == "switchoffbhadrondecays:") {
-	if (param_value=="true") switchoffbhadrondecays = true;
-	else if (param_value=="false") switchoffbhadrondecays = false;
-	else cout << "invalid parameter: switchoffbhadrondecays should be true or false" << endl;		
-      }
-      else if (param_name == "D0decays:") {
-	if (param_value=="true") D0decay = true;
-	else if (param_value=="false") D0decay = false;
-	else cout << "invalid parameter: D0decays should be true or false" << endl;		
-      }
-      // softdrop parameters
-      else if (param_name == "zcut:") _track_cuts.zcut = stof(param_value);
-      else if (param_name == "beta:") _track_cuts.beta = stof(param_value);
-      // medium parameters
-      else if (param_name == "qhatL:") _qhatL = stof(param_value);
-      else if (param_name == "L:") _L = stof(param_value) / constants::invGeVtofm;
-      else if (param_name == "jetAlgorithm:") {
-        if (param_value=="antikt") _jet_algo = fastjet::antikt_algorithm;
-        else if (param_value=="kt") _jet_algo = fastjet::kt_algorithm;
-        else if (param_value=="CA") _jet_algo = fastjet::cambridge_algorithm;
-      }
-      else if (param_name == "jetReclAlgorithm:") {
-        if (param_value=="antikt") _jet_recl_algo = fastjet::antikt_algorithm;
-        else if (param_value=="kt") _jet_recl_algo = fastjet::kt_algorithm;
-        else if (param_value=="CA") _jet_recl_algo = fastjet::cambridge_algorithm;       
-      }
-      else {
-        cout << "unknown command line parameter " << param_name << endl;
-      }
+    }
+
+    //* parameters for the event selection *//
+    set<string> allowed_event_types = {"inc", "inclusive", "cc", "bb", "qq"};
+    string event_type = tree.get<string>("selections.eventSelection");
+    if (allowed_event_types.find(event_type) == allowed_event_types.end()) {
+        throw invalid_argument("Invalid event type specified: " + event_type);
     }
 
     if (event_type == "inclusive" || event_type=="inc") {
@@ -98,10 +141,13 @@ void globalAnalysis::initialize_pythia(int label) {
       _file_label = "inc";
     }
     else if (event_type == "qq") {
+
+      if (!_is_parton_level) throw invalid_argument("Invalid parameter selection: selecting qq events with hadronization on are incompatible selections!");
+
       _is_inclusive = false;
-      if (_is_parton_level) _particle_ids = {constants::DOWN,constants::ANTIDOWN};
-      else cout << "WARNING: hadronization: on and eventSelection: qq are incompatible selections!" << endl;
-      _mc2 = 0.;
+      _parton_ids = {constants::DOWN,constants::ANTIDOWN};
+      _particle_ids = {constants::DOWN,constants::ANTIDOWN};
+      _medium_params.mc2 = 0.;
       _file_label = "qq";
     }
     else if (event_type == "cc") {
@@ -110,7 +156,7 @@ void globalAnalysis::initialize_pythia(int label) {
      if (_is_parton_level) _particle_ids = {constants::CHARM,constants::ANTICHARM};
      else _particle_ids = {constants::D0,constants::D0BAR};
      _file_label = "cc";
-     _mc2 = pow(constants::CHARM_MASS, 2.0);        
+     _medium_params.mc2 = pow(constants::CHARM_MASS, 2.0);        
     }
     else if (event_type == "bb") {
       _is_inclusive = false;
@@ -118,35 +164,14 @@ void globalAnalysis::initialize_pythia(int label) {
       if (_is_parton_level) _particle_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
       else _particle_ids = {constants::B0,constants::B0BAR};
       _file_label = "bb";
-      _mc2 = pow(constants::BOTTOM_MASS, 2.0); 
+      _medium_params.mc2 = pow(constants::BOTTOM_MASS, 2.0); 
     }
-    else { cout << "parameter eventSelection has the allowed values 'inclusive' (all jets), 'qq' (down-quark tagged jets), 'cc' (charm-tagged jets), or 'bb' (bottom-tagged jets)."; }
 
 
   _error_log.open("logfile_"+_file_label+to_string(label));
   assert(_error_log.is_open() && "cannot open the specified error log file.");
-  _error_log << preamble;
- 
 
-  // Pick new random number seed for each run, based on clock
-  _pythia.readString("Random:setSeed = on");
-  _pythia.readString("Random:seed = 0"); 
-
-  // turn off decays of some hadrons, partiuclarly the D0 and various B hadrons that could decay to D's
-  if (!D0decay) _pythia.readString(to_string(constants::D0)+":mayDecay = off");
-  if (switchoffbhadrondecays) {
-    _pythia.readString("511:mayDecay = off");
-    _pythia.readString("521:mayDecay = off");
-    _pythia.readString("523:mayDecay = off");
-    _pythia.readString("513:mayDecay = off");
-    _pythia.readString("531:mayDecay = off");
-    _pythia.readString("533:mayDecay = off");
-    _pythia.readString("5232:mayDecay = off");
-    _pythia.readString("5122:mayDecay = off");
-    _pythia.readString("555:mayDecay = off");
-  }
-	
- _pythia.init();
+  _pythia.init();
 }
 
 

@@ -4,7 +4,7 @@
 #include <boost/math/special_functions/gamma.hpp>
 #include "constants.hh"
 #include "ccbar_analysis.hh"
-#include <unordered_set>
+//#include <unordered_set>
 
 using namespace fastjet;
 using namespace std;
@@ -114,7 +114,7 @@ double Ifun( double alpha, double minval ) {
 double compute_quenching_weight(int flavor, double pT, void * p) {
 
     // retrieve energy loss parameters
-    struct energy_loss_params * params = (struct energy_loss_params *)p;
+    struct mediumParams * params = (struct mediumParams *)p;
     double qhatL = params->qL;
     double jetR = params->jetR;
     double omega_c = params->omega_c;
@@ -139,10 +139,10 @@ double compute_quenching_weight(int flavor, double pT, void * p) {
     return Q_minijet * Q_pert;
 }
 
-vector<PseudoJet> compute_jet_modification( PseudoJet jet, void * p ) {
+vector<PseudoJet> compute_jet_modification( vector<PseudoJet> jet_constituents, void * p ) {
 
     // retrieve energy loss parameters
-    struct energy_loss_params * params = (struct energy_loss_params *)p;
+    struct mediumParams * params = (struct mediumParams *)p;
     double qhatL = params->qL;
     double L = params->L;
     double theta_c = 2. / sqrt( qhatL*L*L );
@@ -150,7 +150,7 @@ vector<PseudoJet> compute_jet_modification( PseudoJet jet, void * p ) {
 
     // cluster particles into groups depending on which ones are closer to each other than the medium resolution length
     // can maybe use the fastjet clustering algorithm for this purpose...?
-    vector<PseudoJet> jet_constituents = jet.constituents();
+    //vector<PseudoJet> jet_constituents = jet.constituents();
     JetDefinition mini_jet_def(kt_algorithm, theta_c);
     ClusterSequence cs(jet_constituents, mini_jet_def);
     vector<PseudoJet> mini_jets = (cs.inclusive_jets(0.0));  // get all clusters with radius theta_c

@@ -3,7 +3,9 @@
 #include "ccbar_analysis.hh"
 #include "constants.hh"
 #include "histograms.hh"
+#include "jet_energy_loss.hh"
 #include "fastjet/ClusterSequence.hh"
+#include "fastjet/contrib/FlavorCone.hh"
 
 
 using namespace Pythia8;
@@ -190,6 +192,9 @@ void EventCCbar::read_event() {
 
    // cluster final particles in the event according to the jet definition jet_def and save the associated cluster sequence for later
    vector<PseudoJet> all_jets;
+   
+   if (_do_energy_loss) _final_particles = compute_jet_modification( _final_particles, &_medium_params);
+
    ClusterSequence cs(_final_particles, _jet_def);
    _cluster_seq = cs;
    // store all jets in the event above the min pT cut and sort them by pT
@@ -386,6 +391,43 @@ Splitting EventCCbar::do_iterative_reclustering(PseudoJet jet) {
   recl_splitting._out2 = subjet_2;
   recl_splitting.set_values();
   return recl_splitting;
+}
+
+
+Splitting EventCCbar::do_flavor_cone(string mode) {
+
+	Splitting splitting_cc;
+
+  if (mode=="bare") {
+
+  	// for comparison, also include the "splitting" which is just the kinematics of the ccbar pair, without anything fancy
+	  splitting_cc._in = _maxpt_tagged_particle+_maxpt_tagged_antiparticle;
+	  if (_maxpt_tagged_particle.perp() > _maxpt_tagged_antiparticle.perp() ) {
+	    splitting_cc._out1 = _maxpt_tagged_particle;
+	    splitting_cc._out2 = _maxpt_tagged_antiparticle;
+	  }
+	  else {
+	    splitting_cc._out1 = _maxpt_tagged_antiparticle;
+	    splitting_cc._out2 = _maxpt_tagged_particle;              
+	  }
+  }
+  else if (mode=="standard" || mode=="HFradius") {
+
+    double FC_jetR;
+    if (mode=="standard") FC_jetR = 0.5 * _track_cuts.jetR;
+    else if (mode=="HFradius") FC_jetR = 0.5 * _maxpt_tagged_particle.delta_R(_maxpt_tagged_antiparticle);
+
+    vector<fastjet::PseudoJet> seeds {_maxpt_tagged_particle, _maxpt_tagged_antiparticle};
+    fastjet::contrib::FlavorConePlugin jdf(seeds, FC_jetR);
+    fastjet::ClusterSequence jcs(_final_particles, &jdf); 
+    vector<fastjet::PseudoJet> FC_jets = sorted_by_pt( jcs.inclusive_jets(0) ); // note that with two seeds, there are always two jets with the FlavorCone method
+
+	  splitting_cc._in = (FC_jets[0] + FC_jets[1]);
+	  splitting_cc._out1 = FC_jets[0];
+	  splitting_cc._out2 = FC_jets[1];
+  }
+	splitting_cc.set_values();
+  return splitting_cc;
 }
 
 

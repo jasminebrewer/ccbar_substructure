@@ -11,7 +11,7 @@ using namespace fastjet;
  * @param hist: Histogram object to store the resulting correlator in
  */
 void EEC2(vector<PseudoJet> particles1, vector<PseudoJet> particles2, double pT_scale, Histogram& hist) {
-  
+
   double x_2L, z1, z2;
   for (auto p1: particles1) {
     z1 = p1.pt() / pT_scale;
@@ -42,7 +42,7 @@ void EEC3(vector<PseudoJet> particles1, vector<PseudoJet> particles2, vector<Pse
         z3 = p3.pt() / pT_scale;
         x_2L = p1.delta_R(p2);
 
-	hist.fill( log10(x_2L), z1*z2*z3 );
+	      hist.fill(log10(x_2L), z1*z2*z3 );
       }
     }
   }
