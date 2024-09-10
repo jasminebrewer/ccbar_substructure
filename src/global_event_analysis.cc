@@ -78,10 +78,10 @@ void globalAnalysis::initialize_pythia(int label) {
     _track_cuts.HFPtMin = tree.get<double>("selections.HFPtMin", 0.0);
     // jet selections
     _track_cuts.jetR = tree.get<double>("selections.jetR", 0.4); // default jet radius is 0.4
-    _track_cuts.JetPtMin = tree.get<double>("selections.JetPtMin", 100.0);
-    _track_cuts.JetPtMax = tree.get<double>("selections.JetPtMax", 1.e10);
-    _track_cuts.JetEtaMin = tree.get<double>("selections.JetEtaMin", -2.0);
-    _track_cuts.JetEtaMax = tree.get<double>("selections.JetEtaMax", 2.0);
+    _track_cuts.JetPtMin = tree.get<double>("selections.jetPtMin", 100.0);
+    _track_cuts.JetPtMax = tree.get<double>("selections.jetPtMax", 1.e10);
+    _track_cuts.JetEtaMin = tree.get<double>("selections.jetEtaMin", -2.0);
+    _track_cuts.JetEtaMax = tree.get<double>("selections.jetEtaMax", 2.0);
     // soft drop parameters
     _track_cuts.zcut = tree.get<double>("selections.zcut", 0.0); // by default, softdrop parameters are zero, so there is no softdrop
     _track_cuts.beta = tree.get<double>("selections.beta", 0.0);
