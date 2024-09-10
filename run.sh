@@ -3,7 +3,8 @@
 BUILD_DIR=$(pwd)/build
 
 # generate a 6-digit code based on the Unix timestamp and name the run directory after that
-RUN_DIR=runs/${1}/run_$(date +"%s" | tail -c 7)
+# RUN_DIR=runs/${1}/run_$(date +"%s" | tail -c 7)
+RUN_DIR=runs/${1}/${3}
 
 # create the run directory if it doesn't exist
 mkdir -p $RUN_DIR
@@ -19,7 +20,7 @@ cd ${RUN_DIR}
 for VARIABLE in 1 2 3 4 5 6 7 8 9
 do
     # addqueue -c "1 day" ${BUILD_DIR}/compute_EEC ${2} $VARIABLE
-    addqueue -c "1 day" ${BUILD_DIR}/compute_EEC ${2} $VARIABLE
+    addqueue -c "1 day" ${BUILD_DIR}/compute_substructure ${2} $VARIABLE
 done
 
 #addqueue -c "1 day" ${BUILD_DIR}/compute_substructure ${2}

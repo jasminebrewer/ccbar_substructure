@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 
   // track total number of jets, and total number of ccbar-tagged jets
   int Njets=0;
-  //int NHFjets=0;
+  int NHFjets=0;
 
   bool jets_lose_energy = true;
   
@@ -79,7 +79,8 @@ int main(int argc, char* argv[]) {
         
     for (auto jet: evt._jets) {
 
-      if (analysis._is_inclusive) Njets++;
+      // if (analysis._is_inclusive) Njets++;
+      Njets++;
 
       if (!analysis._is_inclusive) {
 
@@ -92,14 +93,14 @@ int main(int argc, char* argv[]) {
 	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR);
 	if (!found_splitting) continue;
 
-  	Njets++;
-
 	// when using find_splitting_v2, overwrite the maxpt tagged particles with the final-state version of the particles found by the function
 	evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
 	evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
 
 	// make sure the jet contains these particles as well
 	if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
+
+  NHFjets++;
 
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
 	params.z = evt._splitting._z;
@@ -135,15 +136,15 @@ int main(int argc, char* argv[]) {
   // statistics
   analysis._pythia.stat();
 
-  analysis.normalize_histograms();
+  //analysis.normalize_histograms();
 
-  for (auto& histogram_pair : analysis._histograms) {
-    histogram_pair.second.multiply(1.0/Njets);
-  }
+  // for (auto& histogram_pair : analysis._histograms) {
+  //   histogram_pair.second.multiply(1.0/Njets);
+  // }
 
   analysis.write_histograms();
 
-  //analysis._error_log << "number of jets: " << Njets << ", number of HF jets: " << NHFjets << endl;
+  analysis._error_log << "number of jets: " << Njets << ", number of HF jets: " << NHFjets << endl;
 
   return 0;
 }

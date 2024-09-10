@@ -20,6 +20,7 @@ void EEC2(vector<PseudoJet> particles1, vector<PseudoJet> particles2, double pT_
       x_2L = p1.delta_R(p2);
 
       hist.fill(log10(x_2L), z1*z2);
+      // hist.fill(x_2L, z1*z2);
     }
   }
 }
@@ -43,6 +44,7 @@ void EEC3(vector<PseudoJet> particles1, vector<PseudoJet> particles2, vector<Pse
         x_2L = p1.delta_R(p2);
 
 	      hist.fill(log10(x_2L), z1*z2*z3 );
+        // hist.fill(x_2L, z1*z2*z3 );
       }
     }
   }

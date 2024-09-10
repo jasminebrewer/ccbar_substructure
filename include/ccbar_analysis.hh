@@ -31,6 +31,7 @@ public:
   PseudoJet follow_to_final_state(PseudoJet particle);
   Splitting do_iterative_reclustering(PseudoJet jet);
   Splitting do_flavor_cone(string FC_mode);
+  bool get_pair(PseudoJet jet);
 
   //Splitting find_hardest_splitting(PseudoJet jet);
 
@@ -45,6 +46,7 @@ public:
   JetDefinition _jet_def_recl;          // jet definition for the reclustering step
 
   vector<PseudoJet> _jets;              // up to two jets in the event passing the cuts
+  vector<PseudoJet> _unmodified_jets;
 
   vector<PseudoJet> _tagged_particles;  // vector of PseudoJets containing the tagged final-state particles
   vector<PseudoJet> _tagged_partons;    // for the case where hadronization is on, also store the tagged particles at parton-level

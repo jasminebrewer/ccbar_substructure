@@ -26,6 +26,9 @@ struct trackCuts {
   double eecMin = -2.5;
   double eecMax = -0.25;
   double eec_bin_size = 0.055;
+  // double eecMin = 0.0;
+  // double eecMax = 0.5;
+  // double eec_bin_size = 0.02;
   double zcut=0.0;
   double beta=0.0;
 };
