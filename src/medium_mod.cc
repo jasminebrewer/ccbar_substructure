@@ -1,5 +1,7 @@
 #include "complex_Ei.hh"
 #include "constants.hh"
+#include "medium_mod.hh"
+#include "global_event_analysis.hh"
 #include <complex>
 #include <boost/math/quadrature/tanh_sinh.hpp>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
@@ -7,8 +9,6 @@
 
 using namespace std;
 const std::complex<double> i(0, 1);
-
-struct splitting_params {double z; double Eg; double mc2; double pt2; double qL; double L;}; 
 
 
 /* three helper functions to compute quantities used by the integrand function */
@@ -39,21 +39,21 @@ double integrand(double x, void * p) {
   double qL = (params->qL);
 
   // compute omega and mu values for use in calculating the integrand
-  complex<double> omega = compute_omega(eg,z);
+  std::complex<double> omega = compute_omega(eg,z);
   double mu = compute_mu(eg,z);
 
-  complex<double> exparg1 = -i*0.5*pt2t*tan(omega*x)/(mu*omega);
-  complex<double> exparg2 = (1.+i*0.5*tan(omega*x)*c(z)*(1.-x)/(mu*omega));
+  std::complex<double> exparg1 = -i*0.5*pt2t*tan(omega*x)/(mu*omega);
+  std::complex<double> exparg2 = (1.+i*0.5*tan(omega*x)*c(z)*(1.-x)/(mu*omega));
   // integrand involves difference between to Exponential Integral Ei functions, whose arguments in practice are very similar
   // (exparg2 \approx 1 + epsilon*c, where epsilon is small and c is complex)
   // uses custom implementation of the exponential integral for complex arguments which is accurate over wide range of argument values
   std::complex<double> exp_diff = Ei(exparg1)-Ei(exparg1/exparg2);
 
-  complex<double> I4 = (1./(qL*eg*c(z))) * exp(-i*0.5*x*mc2t/mu) * (-i*omega/sin(omega*x)) * ( (mc2t-2.*i*mu*omega*(z*z+(1.-z)*(1.-z))/(sin(omega*x)))*exp_diff
+  std::complex<double> I4 = (1./(qL*eg*c(z))) * exp(-i*0.5*x*mc2t/mu) * (-i*omega/sin(omega*x)) * ( (mc2t-2.*i*mu*omega*(z*z+(1.-z)*(1.-z))/(sin(omega*x)))*exp_diff
 											       -(2.*i*mu*omega*(z*z+(1.-z)*(1.-z))/(sin(omega*x)))*(-exp(-i*0.5*pt2t*tan(omega*x)/(mu*omega))
 																		    + exp(exparg1/exparg2)/exparg2) );
 
-  complex<double> I5 = (1./(qL*eg)) * exp(-i*0.5*mc2t*x/mu) * (1./(i*(mc2t+pt2t)*cos(omega*x))) * exp(-i*0.5*pt2t*tan(omega*x)/(mu*omega)) * (mc2t + (pt2t/cos(omega*x))*(z*z + (1.-z)*(1.-z)));
+  std::complex<double> I5 = (1./(qL*eg)) * exp(-i*0.5*mc2t*x/mu) * (1./(i*(mc2t+pt2t)*cos(omega*x))) * exp(-i*0.5*pt2t*tan(omega*x)/(mu*omega)) * (mc2t + (pt2t/cos(omega*x))*(z*z + (1.-z)*(1.-z)));
 
   // the integrand is the real part of I4+I5
   return (I4 + I5).real();
@@ -132,7 +132,7 @@ void make_2d_plot() {
   ofstream outfile;
   outfile.open("Pmed_over_Pvac.txt");
 
-  struct splitting_params params;
+  splitting_params params;
   double invGeVtofm = 0.1973; // conversion for length units in GeV^{-1} to fermi
   params.L = 4.0 / invGeVtofm;
   params.qL = 2.0;
