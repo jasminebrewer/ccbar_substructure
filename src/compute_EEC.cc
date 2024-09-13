@@ -84,6 +84,7 @@ int main(int argc, char* argv[]) {
 
       if (!analysis._is_inclusive) {
 
+  evt._has_pair = evt.get_pair(jet);
 	if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
 
 	//Splitting hardest_split = evt.find_hardest_splitting(jet);
@@ -94,11 +95,11 @@ int main(int argc, char* argv[]) {
 	if (!found_splitting) continue;
 
 	// when using find_splitting_v2, overwrite the maxpt tagged particles with the final-state version of the particles found by the function
-	evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
-	evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
+	// evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
+	// evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
 
-	// make sure the jet contains these particles as well
-	if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
+	// // make sure the jet contains these particles as well
+	// if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
 
   NHFjets++;
 

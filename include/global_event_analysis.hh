@@ -42,6 +42,7 @@ struct mediumParams {
   double alpha_med = 0.1; // medium coupling
   double mc2; // squared quark mass
   double jetR;
+  string resolutionMode;
 };
 
 
@@ -95,6 +96,8 @@ public:
   JetAlgorithm _jet_algo;               // algorithm for the jet clustering
   JetAlgorithm _jet_recl_algo;          // algorithm for the reclustering step
   string _FC_mode;                      // string specifying the type of flavor cone method to use
+  bool _match_splitting;                // boolean specifying whether or not to match particles between pythia splitting and in the reclustering
+  bool _apply_sd_to_all;                // boolean for whether to apply the softdrop cut to the whole jet, or just for the purpose of event selection
 
   trackCuts _track_cuts;                // struct containing kinematic cuts for the analysis
   mediumParams _medium_params;          // struct containing parameters for the medium modification

@@ -147,13 +147,18 @@ vector<PseudoJet> compute_jet_modification( vector<PseudoJet> jet_constituents, 
     double L = params->L;
     double theta_c = 2. / sqrt( qhatL*L*L );
     double jetR = params->jetR;
+    string resolution_mode = params->resolutionMode;
 
+    double minijetR;
+    if (resolution_mode=="jet") minijetR=jetR; // resolution length of the entire jet, meaning the jet loses energy as a whole object
+    else if (resolution_mode=="thetac") minijetR=theta_c; // resolution length of theta_c
+    else if (resolution_mode=="zero") minijetR=1e-10; // zero resolution length, so each particle is modified individually
+        
     // cluster particles into groups depending on which ones are closer to each other than the medium resolution length
-    // can maybe use the fastjet clustering algorithm for this purpose...?
-    //vector<PseudoJet> jet_constituents = jet.constituents();
-    JetDefinition mini_jet_def(kt_algorithm, theta_c);
+    JetDefinition mini_jet_def(kt_algorithm, minijetR);
     ClusterSequence cs(jet_constituents, mini_jet_def);
     vector<PseudoJet> mini_jets = (cs.inclusive_jets(0.0));  // get all clusters with radius theta_c
+
     vector<PseudoJet> modified_jet;
 
     double quenching_weight = 0.;
@@ -171,8 +176,6 @@ vector<PseudoJet> compute_jet_modification( vector<PseudoJet> jet_constituents, 
             modified_jet.push_back( scaleMomentum(c, quenching_weight) );
         }
     }
-
-    // cout << "total quenching weight: " << total_quenching_weight << ", from modified jet: " << mod_jets[0].perp() << endl;
 
     return modified_jet;
 

@@ -31,6 +31,7 @@ public:
   PseudoJet follow_to_final_state(PseudoJet particle);
   Splitting do_iterative_reclustering(PseudoJet jet);
   Splitting do_flavor_cone(string FC_mode);
+  Splitting get_random_splitting(PseudoJet jet);
   bool get_pair(PseudoJet jet);
 
   //Splitting find_hardest_splitting(PseudoJet jet);

@@ -109,12 +109,19 @@ void globalAnalysis::initialize_pythia(int label) {
     if (allowed_FC_modes.find(_FC_mode) == allowed_FC_modes.end()) {
         throw invalid_argument("Invalid mode specified for Flavor Cone: " + _FC_mode);
     }
+    _match_splitting = tree.get<bool>("selections.matchSplit", false);
+    _apply_sd_to_all = tree.get<bool>("selections.applySDtoall", false);
 
     //* parameters for the medium modification *//
     bool do_medium_mod = tree.get<bool>("medium.doMediumModification", false);
     if (do_medium_mod) { // read parameters for the medium modification
       _medium_params.qL = tree.get<double>("medium.qhatL", 4.0);
       _medium_params.L = tree.get<double>("medium.L", 4.0) / constants::invGeVtofm; // converts value provided in fm into GeV^-1
+      _medium_params.resolutionMode = tree.get<string>("medium.resolution","thetac");
+      set<string> allowed_resolution_modes = {"jet", "zero", "thetac"};
+      if (allowed_resolution_modes.find(_medium_params.resolutionMode) == allowed_resolution_modes.end()) {
+        throw invalid_argument("Invalid mode specified for resolution: " + _medium_params.resolutionMode);
+      }
 
       _do_energy_loss = tree.get<bool>("medium.doEnergyLoss", false);
       if (_do_energy_loss) { // if you are going to do energy loss, read the extra necessary parameters

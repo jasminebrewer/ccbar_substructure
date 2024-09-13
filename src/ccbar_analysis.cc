@@ -3,6 +3,7 @@
 #include "ccbar_analysis.hh"
 #include "constants.hh"
 #include "histograms.hh"
+#include "splitting.hh"
 #include "jet_energy_loss.hh"
 #include "fastjet/ClusterSequence.hh"
 #include "fastjet/contrib/FlavorCone.hh"
@@ -378,6 +379,43 @@ for (auto tp: _tagged_particles) {
 }
 return (has_particle && has_antiparticle);
 }
+
+void record_splittings(PseudoJet reclustered_jet, vector<Splitting>& splitting_list) {
+
+  PseudoJet subjet_1, subjet_2;
+  if (reclustered_jet.has_parents( subjet_1, subjet_2 )) {
+
+    Splitting split( reclustered_jet, subjet_1, subjet_2 );
+    split.set_values();
+
+    // if (split._virt > 2.*constants::CHARM_MASS) splitting_list.push_back(split);
+    if (split._kt > 1.) splitting_list.push_back(split);
+    record_splittings(subjet_1, splitting_list);
+    record_splittings(subjet_2, splitting_list);
+  }
+}
+
+Splitting EventCCbar::get_random_splitting(PseudoJet jet) {
+
+  // recluster the jet
+  vector<PseudoJet> jet_constituents = jet.constituents();
+  ClusterSequence reclustering(jet_constituents, _jet_def_recl);
+  PseudoJet reclustered_jet = (reclustering.inclusive_jets(0.0)).at(0);  // get the reclustered jet
+
+  vector<Splitting> all_splittings;
+  record_splittings(reclustered_jet, all_splittings);
+
+  if (all_splittings.size()==0) {
+    Splitting empty;
+    empty.set_values();
+    return empty;
+  }
+
+  // randomly choose one of the splittings passing the (charm) mass threshold
+  int rand_index = rand() % all_splittings.size();
+  return all_splittings[ rand_index ];
+}
+
 
 /**
  * @brief function to iteratively recluster a jet following the maximum pt tagged particle and antiparticle in the reclustering

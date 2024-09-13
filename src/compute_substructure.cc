@@ -82,7 +82,13 @@ int main(int argc, char* argv[]) {
       double unmod_jet_pt = 0.0;
       if (evt._unmodified_jets.size()==evt._jets.size()) unmod_jet_pt = evt._unmodified_jets[i].perp();
 
-      if (analysis._is_inclusive) analysis._error_log << jet.perp() << endl;
+      if (analysis._is_inclusive) {
+
+        Splitting rand_splitting = evt.get_random_splitting(jet);
+        // evt.get_random_splitting(jet);
+        
+        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << 0.0 << ", " << 1 << ", " << 0 << ", " << rand_splitting._Eg << ", " << rand_splitting._pt << ", " << rand_splitting._kt << ", " << rand_splitting._z << ", " << rand_splitting._dR << ", " << rand_splitting._virt << endl;
+      }
 
       if (!analysis._is_inclusive) {
 
@@ -98,6 +104,9 @@ int main(int argc, char* argv[]) {
 	// reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
 
+  // try out doing some level of soft drop on the rest of the jet
+  if (analysis._apply_sd_to_all) jet = sd_jet;
+
 	//Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
 
@@ -105,18 +114,20 @@ int main(int argc, char* argv[]) {
 	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR);
 	if (!found_splitting) continue;
 
-	// when using find_splitting_v2, overwrite the maxpt tagged particles with the final-state version of the particles found by the function
-	// evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
-	// evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
+  if (analysis._match_splitting) {
+	  // when using find_splitting_v2, can choose to overwrite the maxpt tagged particles with the final-state version of the particles found by the function
+	  evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
+	  evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
 
-	// make sure the jet contains these particles as well
-	// if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
+	  // make sure the jet contains these particles as well
+	  if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
+  }
 
 	evt.calculate_splitting_level(); // calculate the level of the splitting found above
 
 	recl_splitting = evt.do_iterative_reclustering(jet); // recluster the jet
 
-//   splitting_cc = evt.do_flavor_cone(analysis._FC_mode);
+  splitting_cc = evt.do_flavor_cone(analysis._FC_mode);
 
 
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
@@ -125,7 +136,7 @@ int main(int argc, char* argv[]) {
 	params.pt2 = pow(evt._splitting._kt, 2.);
 	med_weight = compute_medium_weight(&params, true); // gauss integration
 
-analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << endl;
+  analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
   // analysis._error_log << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
   // analysis._error_log << jet.perp() << ", " << modified_jet.perp() << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << mod_recl_splitting._level << ", " << mod_recl_splitting._Eg << ", " << mod_recl_splitting._pt << ", " << mod_recl_splitting._kt << ", " << mod_recl_splitting._z << ", " << mod_recl_splitting._dR << ", " << mod_recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
       }

@@ -39,7 +39,8 @@ double get_z( PseudoJet leading_subjet, PseudoJet subleading_subjet) {
  * @param leading_subjet: higher-pt subjet of a splitting
  * @param subleading_subjet: lower-pt subjet of a splitting
  * @return transverse momentum of the splitting
-*/double get_kt( PseudoJet leading_subjet, PseudoJet subleading_subjet) {
+*/
+double get_kt( PseudoJet leading_subjet, PseudoJet subleading_subjet) {
 
   PseudoJet sum = leading_subjet + subleading_subjet;
 
