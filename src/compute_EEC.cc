@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
   globalAnalysis analysis(pythia, static_cast<std::string>(argv[1]));
   analysis.initialize_pythia(label);
 
-  vector<std::string> histogram_names {"eec2_all_"+to_string(label), "eec2_part_"+to_string(label), "eec3_all_"+to_string(label), "eec3_part_"+to_string(label), "eec2_med_all_"+to_string(label), "eec2_med_part_"+to_string(label), "eec3_med_all_"+to_string(label), "eec3_med_part_"+to_string(label)};
+  vector<std::string> histogram_names {"eec2_all_"+to_string(label), "eec2_part_"+to_string(label), "eec2_part_cc_"+to_string(label), "eec2_part_bb_"+to_string(label), "eec3_all_"+to_string(label), "eec3_part_"+to_string(label), "eec2_med_all_"+to_string(label), "eec2_med_part_"+to_string(label), "eec3_med_all_"+to_string(label), "eec3_med_part_"+to_string(label)};
   analysis.declare_histograms(histogram_names);
 
   Histogram tmp(analysis._track_cuts.eecMin, analysis._track_cuts.eecMax, analysis._track_cuts.eec_bin_size);
@@ -56,6 +56,7 @@ int main(int argc, char* argv[]) {
   int NHFjets=0;
 
   bool jets_lose_energy = true;
+  PseudoJet jet;
   
   // Begin event loop
   for (int iEvent = 0; iEvent < analysis._n_events; ++iEvent) {
@@ -77,10 +78,25 @@ int main(int argc, char* argv[]) {
 
     if (evt._jets.size()==0) continue; // event has no jets passing the selections
         
-    for (auto jet: evt._jets) {
+    for (int i=0; i<evt._jets.size(); i++) {
 
-      // if (analysis._is_inclusive) Njets++;
       Njets++;
+
+      jet = evt._jets[i];
+      double unmod_jet_pt = 0.0;
+      if (evt._unmodified_jets.size()==evt._jets.size()) unmod_jet_pt = evt._unmodified_jets[i].perp();
+
+      if (analysis._is_inclusive) {
+        
+        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << endl;
+        tmp.set_to_zero();
+	      EEC2(evt._tagged_cquarks, evt._tagged_cquarks, jet.pt(), tmp);
+	      analysis._histograms.at("eec2_part_cc_"+to_string(label)).add(tmp._values);
+
+	      tmp.set_to_zero();
+	      EEC2(evt._tagged_bquarks, evt._tagged_bquarks, jet.pt(), tmp);
+	      analysis._histograms.at("eec2_part_bb_"+to_string(label)).add(tmp._values);
+      }
 
       if (!analysis._is_inclusive) {
 
@@ -94,13 +110,15 @@ int main(int argc, char* argv[]) {
 	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR);
 	if (!found_splitting) continue;
 
-	// when using find_splitting_v2, overwrite the maxpt tagged particles with the final-state version of the particles found by the function
-	// evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
-	// evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
+  if (analysis._match_splitting) {
+	  // when using find_splitting_v2, can choose to overwrite the maxpt tagged particles with the final-state version of the particles found by the function
+	  evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
+	  evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
 
-	// // make sure the jet contains these particles as well
-	// if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
-
+	  // make sure the jet contains these particles as well
+	  if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
+  }
+  
   NHFjets++;
 
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
@@ -111,14 +129,21 @@ int main(int argc, char* argv[]) {
             
 	tmp.set_to_zero();
 	EEC2(evt._tagged_particles, evt._tagged_particles, jet.pt(), tmp);
-	analysis._histograms.at("eec2_part_"+to_string(label)).add(tmp._values);
+	
+	analysis._error_log << jet.perp() << ", " << unmod_jet_pt << ", " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << ", " << (evt._maxpt_tagged_particle + evt._maxpt_tagged_antiparticle).perp() << ", " << med_weight;
+  for (auto val: tmp._values) analysis._error_log << ", " << val;
+  analysis._error_log << endl;
+
+  if (med_weight<0. || med_weight>5.) continue;
+
+  analysis._histograms.at("eec2_part_"+to_string(label)).add(tmp._values);
 	analysis._histograms.at("eec2_med_part_"+to_string(label)).add(tmp._values, med_weight);
 
 	tmp.set_to_zero();
 	EEC3(evt._tagged_particles, evt._tagged_particles, jet.constituents(), jet.pt(), tmp);
 	analysis._histograms.at("eec3_part_"+to_string(label)).add(tmp._values);
 	analysis._histograms.at("eec3_med_part_"+to_string(label)).add(tmp._values, med_weight); 
-      }
+      }// FOR FUTURE ANALYSES, SHOULD REALLY PUT "ALL" CORRELATORS INSIDE THIS LOOP
 
       // generic EEC: loops over all constituents, with the jet pt as the hard scale
       tmp.set_to_zero();

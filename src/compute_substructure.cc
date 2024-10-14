@@ -98,10 +98,12 @@ int main(int argc, char* argv[]) {
   evt._has_pair = evt.get_pair(jet);
   if (!evt._has_pair) continue;
 
+  // if ( (evt._maxpt_tagged_particle+evt._maxpt_tagged_antiparticle).perp() < 0.2*jet.perp()) continue;
+
 	// do soft-drop grooming on the jet to remove soft splittings                                                                                                  
 	fastjet::PseudoJet sd_jet = sd(jet);
 
-	// reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
+	// // reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
 
   // try out doing some level of soft drop on the rest of the jet
