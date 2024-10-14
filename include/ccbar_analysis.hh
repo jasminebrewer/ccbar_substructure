@@ -32,6 +32,7 @@ public:
   Splitting do_iterative_reclustering(PseudoJet jet);
   Splitting do_flavor_cone(string FC_mode);
   Splitting get_random_splitting(PseudoJet jet);
+  bool get_pair();
   bool get_pair(PseudoJet jet);
 
   //Splitting find_hardest_splitting(PseudoJet jet);
@@ -50,6 +51,10 @@ public:
   vector<PseudoJet> _unmodified_jets;
 
   vector<PseudoJet> _tagged_particles;  // vector of PseudoJets containing the tagged final-state particles
+  // temporary addition!!
+  vector<PseudoJet> _tagged_cquarks;
+  vector<PseudoJet> _tagged_bquarks;
+
   vector<PseudoJet> _tagged_partons;    // for the case where hadronization is on, also store the tagged particles at parton-level
   PseudoJet _maxpt_tagged_antiparticle; // PseudoJet containing the maximum pt tagged particle in the event
   PseudoJet _maxpt_tagged_particle;     // PsuedoJet containing the maximum pt antiparticle in the event

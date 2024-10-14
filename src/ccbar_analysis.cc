@@ -132,10 +132,8 @@ PseudoJet EventCCbar::follow_to_final_state( PseudoJet particle) {
  */
 void EventCCbar::read_event() {
 
-  // double max_pt_particle=0.;
-  // double max_pt_antiparticle=0.;
-  // bool has_particle=false;
-  // bool has_antiparticle=false;
+  vector<int> cids = {4,-4};
+  vector<int> bids = {5,-5};
 
   // loop over all particles in the event
   for (Particle& p: _py_event) {
@@ -159,6 +157,9 @@ void EventCCbar::read_event() {
     
     _final_particles.push_back(particle);
 
+    if (is_contained(p.id(), cids)) _tagged_cquarks.push_back(particle);
+    if (is_contained(p.id(), bids)) _tagged_bquarks.push_back(particle);
+
     if (_is_inclusive) continue; // no extra particle info to save, so we're done
 
     // add a particle to tagged_particles if it has a particle id matching particle_ids, and if its pT is bigger than the low pT cut for heavy flavor 
@@ -168,6 +169,7 @@ void EventCCbar::read_event() {
   }
   // sort the tagged particles by pT
   _tagged_particles = sorted_by_pt(_tagged_particles); 
+  _has_pair = get_pair(); // set values for maxpt_tagged_particle and maxpt_tagged_antiparticle, and has_pair
 }
 
 
@@ -184,7 +186,6 @@ void EventCCbar::read_event() {
    // store all jets in the event above the min pT cut and sort them by pT
    all_jets = sorted_by_pt( cs_umod.inclusive_jets(_track_cuts.JetPtMin) );
 
-  //cout << "unmodified jets: ";
    for (auto jet: all_jets) {
 
      // reject jets that either don't have constituents or fall outside of the acceptance cuts of the analysis
@@ -193,8 +194,11 @@ void EventCCbar::read_event() {
 
      if ( _unmodified_jets.size() < 2 ) _unmodified_jets.push_back(jet);
    }
+
+   // to save computational time, only compute energy loss if at least some (unmodified) jets pass the cuts and satisfy the event selection criteria for the analysis
+   bool is_candidate_event = ( _unmodified_jets.size()>0 ) && _has_pair;
    
-   if (_do_energy_loss) {
+   if (_do_energy_loss && is_candidate_event) {
     _final_particles = compute_jet_modification( _final_particles, &_medium_params);
 
     // update tagged particles and maxpt particle and antiparticle
@@ -203,41 +207,30 @@ void EventCCbar::read_event() {
       // add a particle to tagged_particles if it has a particle id matching particle_ids, and if its pT is bigger than the low pT cut for heavy flavor 
       if (is_contained(p.user_info<ExtraInfo>().pdg_id(), _particle_ids) && p.perp()>_track_cuts.HFPtMin ) {
         _tagged_particles.push_back(p);
-
-      // // keep track of the highest-pT tagged particle and tagged antiparticle in the event
-      // if (p.user_info<ExtraInfo>().pdg_id()>0 && p.perp()>max_pt_particle) {
-      //   max_pt_particle = p.perp();
-      //   _maxpt_tagged_particle = p;
-      // }
-      // if (p.user_info<ExtraInfo>().pdg_id()<0 && p.perp()>max_pt_antiparticle) { 
-      //   max_pt_antiparticle = p.perp();
-      //   _maxpt_tagged_antiparticle = p;
-      // }
       }
     }
     // sort the tagged particles by pT
     _tagged_particles = sorted_by_pt(_tagged_particles); 
+
+    ClusterSequence cs(_final_particles, _jet_def);
+    _cluster_seq = cs;
+    // store all jets in the event above the min pT cut and sort them by pT
+    all_jets = sorted_by_pt( _cluster_seq.inclusive_jets(_track_cuts.JetPtMin) );
+
+    for (auto jet: all_jets) {
+
+      // reject jets that either don't have constituents or fall outside of the acceptance cuts of the analysis
+      bool pass_jet_cuts = (jet.has_constituents() && jet.eta()>_track_cuts.JetEtaMin && jet.eta()<_track_cuts.JetEtaMax && jet.pt()>_track_cuts.JetPtMin && jet.pt()<_track_cuts.JetPtMax );
+      if (!pass_jet_cuts) continue;
+
+      // add at most 2 highest pt jets from the event satisfying the cuts to the event's jets
+      if ( _jets.size() < 2 ) _jets.push_back(jet);
+    }
    }
-
-
-   ClusterSequence cs(_final_particles, _jet_def);
-   _cluster_seq = cs;
-   // store all jets in the event above the min pT cut and sort them by pT
-   all_jets = sorted_by_pt( _cluster_seq.inclusive_jets(_track_cuts.JetPtMin) );
-
-  // cout << "modified jets: ";
-   for (auto jet: all_jets) {
-
-     // reject jets that either don't have constituents or fall outside of the acceptance cuts of the analysis
-     bool pass_jet_cuts = (jet.has_constituents() && jet.eta()>_track_cuts.JetEtaMin && jet.eta()<_track_cuts.JetEtaMax && jet.pt()>_track_cuts.JetPtMin && jet.pt()<_track_cuts.JetPtMax );
-     if (!pass_jet_cuts) continue;
-
-      //cout << jet.perp() << ", ";
-
-     // add at most 2 highest pt jets from the event satisfying the cuts to the event's jets
-     if ( _jets.size() < 2 ) _jets.push_back(jet);
+   else { // if there is no energy loss, the jets and cluster sequence are the same as for unmodified jets
+    _cluster_seq = cs_umod;
+    copy(_unmodified_jets.begin(), _unmodified_jets.end(), back_inserter(_jets));
    }
-   // cout << endl;
 }
 
 
@@ -366,13 +359,35 @@ bool EventCCbar::get_pair(PseudoJet jet) {
 
 bool has_particle = false;
 bool has_antiparticle = false;
+double max_particle_pt = 0.0;
+double max_antiparticle_pt = 0.0;
 
 for (auto tp: _tagged_particles) {
-  if (contains(jet, tp) && tp.user_info<ExtraInfo>().pdg_id()>0 && tp.perp()>_maxpt_tagged_particle.perp() ) {
+  if (contains(jet, tp) && tp.user_info<ExtraInfo>().pdg_id()>0 && tp.perp()>max_particle_pt ) {
+    _maxpt_tagged_particle = tp;
+    max_particle_pt = tp.perp();
+    has_particle = true;
+  }
+  if (contains(jet, tp) && tp.user_info<ExtraInfo>().pdg_id()<0 && tp.perp()>max_antiparticle_pt) {
+    _maxpt_tagged_antiparticle = tp;
+    max_antiparticle_pt = tp.perp();
+    has_antiparticle = true;
+  }
+}
+return (has_particle && has_antiparticle);
+}
+
+bool EventCCbar::get_pair() {
+
+bool has_particle = false;
+bool has_antiparticle = false;
+
+for (auto tp: _tagged_particles) {
+  if (tp.user_info<ExtraInfo>().pdg_id()>0 && tp.perp()>_maxpt_tagged_particle.perp() ) {
     _maxpt_tagged_particle = tp;
     has_particle = true;
   }
-  if (contains(jet, tp) && tp.user_info<ExtraInfo>().pdg_id()<0 && tp.perp()>_maxpt_tagged_antiparticle.perp()) {
+  if (tp.user_info<ExtraInfo>().pdg_id()<0 && tp.perp()>_maxpt_tagged_antiparticle.perp()) {
     _maxpt_tagged_antiparticle = tp;
     has_antiparticle = true;
   }
