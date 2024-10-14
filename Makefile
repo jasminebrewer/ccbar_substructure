@@ -16,9 +16,10 @@ SRCS = src/global_event_analysis.cc src/ccbar_analysis.cc src/EEC.cc src/splitti
 OBJS = $(SRCS:src/%.cc=build/%.o)
 
 # Define the two executables and their respective main files
-TARGETS = build/compute_substructure build/compute_EEC
+TARGETS = build/compute_substructure build/compute_EEC build/compute_spectra
 MAIN_SUB = src/compute_substructure.cc
 MAIN_EEC = src/compute_EEC.cc
+MAIN_SPEC = src/compute_spectra.cc
 
 # Default target - build both executables
 all: $(TARGETS)
@@ -29,11 +30,17 @@ build/compute_substructure: $(OBJS) build/compute_substructure.o
 build/compute_EEC: $(OBJS) build/compute_EEC.o
 	$(CXX) $(OBJS) build/compute_EEC.o -o build/compute_EEC $(LDFLAGS) $(LDLIBS)
 
+build/compute_spectra: $(OBJS) build/compute_spectra.o
+	$(CXX) $(OBJS) build/compute_spectra.o -o build/compute_spectra $(LDFLAGS) $(LDLIBS)
+
 build/compute_substructure.o: $(MAIN_SUB)
 	$(CXX) $(CXXFLAGS) -c $(MAIN_SUB) -o build/compute_substructure.o
 
 build/compute_EEC.o: $(MAIN_EEC)
 	$(CXX) $(CXXFLAGS) -c $(MAIN_EEC) -o build/compute_EEC.o
+
+build/compute_spectra.o: $(MAIN_SPEC)
+	$(CXX) $(CXXFLAGS) -c $(MAIN_SPEC) -o build/compute_spectra.o
 
 # Rule to compile the shared modules
 build/%.o: src/%.cc
