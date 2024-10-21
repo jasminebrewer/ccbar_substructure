@@ -210,7 +210,8 @@ void EventCCbar::read_event() {
       }
     }
     // sort the tagged particles by pT
-    _tagged_particles = sorted_by_pt(_tagged_particles); 
+    _tagged_particles = sorted_by_pt(_tagged_particles);
+   }
 
     ClusterSequence cs(_final_particles, _jet_def);
     _cluster_seq = cs;
@@ -225,11 +226,6 @@ void EventCCbar::read_event() {
 
       // add at most 2 highest pt jets from the event satisfying the cuts to the event's jets
       if ( _jets.size() < 2 ) _jets.push_back(jet);
-    }
-   }
-   else { // if there is no energy loss, the jets and cluster sequence are the same as for unmodified jets
-    _cluster_seq = cs_umod;
-    copy(_unmodified_jets.begin(), _unmodified_jets.end(), back_inserter(_jets));
    }
 }
 
