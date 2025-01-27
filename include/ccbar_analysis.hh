@@ -26,9 +26,13 @@ public:
   void read_event();
   void cluster_jets();
   void find_splitting();
-  bool find_splitting_v2(PseudoJet jet, double jetR);
+  bool find_splitting_v2(PseudoJet jet, double jetR, bool include_recursive_daughters);
+  PseudoJet find_initiator(int current_particle);
+  int find_typical_initiator(PseudoJet jet);
   void calculate_splitting_level();
   PseudoJet follow_to_final_state(PseudoJet particle);
+  void add_daughter( PseudoJet particle, vector<PseudoJet>& daughters);
+  PseudoJet all_daughters_until_final_state( PseudoJet particle);
   Splitting do_iterative_reclustering(PseudoJet jet);
   Splitting do_flavor_cone(string FC_mode);
   Splitting get_random_splitting(PseudoJet jet);

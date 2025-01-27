@@ -4,6 +4,21 @@
 #include <boost/property_tree/ptree.hpp> // used for processing ini initialization files
 #include <boost/property_tree/ini_parser.hpp>
 
+
+/** 
+ * @brief helper function to determine if a particle has charm or bottom quarks from its particle id
+*/
+bool has_charm(Particle p) {
+
+  int id = p.idAbs();
+  return ((id / 100) % 10 == 4 || (id / 1000) % 10 == 4); // check for 4 in 100s or 1000s place
+}
+
+bool has_bottom(Particle p) {
+  int id = p.idAbs();
+  return ((id / 100) % 10 == 5 || (id / 1000) % 10 == 5); // check for 4 in 100s or 1000s place
+}
+
 /**
  * @brief function to set parameters of the analysis and initialize pythia from values specified in the parameter file
  */
@@ -11,6 +26,9 @@ void globalAnalysis::initialize_pythia(int label) {
 
     boost::property_tree::ptree tree;
     boost::property_tree::ini_parser::read_ini(_parameter_file, tree);
+
+    set<int> chadrons = {411,421,10411,10421,413,423,10413,10423,20413,20423,415,425,431,10431,433,10433,20433,435,4122,4222,4212,4112,4224,4214,4232,4132,4322,4312,4324,4314,4332,4334,4412,4422,4414,4424,4432,4434,4444,441,10441,100441,443,10443,20443,100443,30443,445};
+    set<int> bhadrons = {511,521,513,523,515,525,531,533,535,541,543,545,10511,10521,10513,10523,20513,20523,10531,10533,20533,10541,10543,20543,5122,5112,5212,5222,5114,5214,5224,5132,5232,5312,5322,5314,5324,5332,5334,5142,5242,5412,5422,5414,5424,5342,5432,5434,5442,5444,5512,5522,5514,5524,5532,5534,5542,5544,5554,551,10551,553,10553,20553,100553,200553,555};
 
     //* load parameters for the pythia generation *//
 
@@ -42,33 +60,58 @@ void globalAnalysis::initialize_pythia(int label) {
     if (!tree.get<bool>("pythia.MPI", true)) _pythia.readString("PartonLevel:MPI = off");
     else _pythia.readString("PartonLevel:MPI = on");
 
-    // by default, pythia generation takes a new seed for each run from the clock time
-    if (tree.get<bool>("pythia.random", true)) {
-      _pythia.readString("Random:setSeed = on");
-      _pythia.readString("Random:seed = 0"); 
+    _is_parton_level = ! tree.get<bool>("pythia.hadronization", true);
+
+    set<string> allowed_hadron_modes = {"all", "measurable", "D/B"};
+    _hadron_mode = tree.get<string>("selections.includeHadrons", "D/B");
+    if (allowed_hadron_modes.find(_hadron_mode) == allowed_hadron_modes.end()) {
+        throw invalid_argument("Invalid mode specified for hadrons: " + _hadron_mode);
     }
 
-    _is_parton_level = ! tree.get<bool>("pythia.hadronization", true);
+    //_include_all_hadrons = tree.get<bool>("pythia.includeAllHadrons", false);
+
     if (_is_parton_level) {
       _pythia.readString("HadronLevel:all = off");
     }
     else {
       _pythia.readString("HadronLevel:all = on"); // turn on hadronization
       // read through other flags that are specific to hadron-level events, about decays of various hadrons
-      // by default, D0 doesn't decay:
-      if (tree.get<bool>("pythia.switchoffD0decay", true)) _pythia.readString(to_string(constants::D0)+":mayDecay = off");
-      // by default, B hadrons don't decay:
-      if (tree.get<bool>("pythia.switchoffbhadrondecays", true)) {
-        _pythia.readString("511:mayDecay = off");
-        _pythia.readString("521:mayDecay = off");
-        _pythia.readString("523:mayDecay = off");
-        _pythia.readString("513:mayDecay = off");
-        _pythia.readString("531:mayDecay = off");
-        _pythia.readString("533:mayDecay = off");
-        _pythia.readString("5232:mayDecay = off");
-        _pythia.readString("5122:mayDecay = off");
-        _pythia.readString("555:mayDecay = off");
+      // if (_hadron_mode == "D/B") {
+      //   if (tree.get<bool>("pythia.switchoffD0decay", true)) _pythia.readString(to_string(constants::D0)+":mayDecay = off");
+      //   // by default, B hadrons don't decay:
+      //   if (tree.get<bool>("pythia.switchoffbhadrondecays", true)) {
+      //     _pythia.readString("511:mayDecay = off");
+      //     _pythia.readString("521:mayDecay = off");
+      //     _pythia.readString("523:mayDecay = off");
+      //     _pythia.readString("513:mayDecay = off");
+      //     _pythia.readString("531:mayDecay = off");
+      //     _pythia.readString("533:mayDecay = off");
+      //     _pythia.readString("5232:mayDecay = off");
+      //     _pythia.readString("5122:mayDecay = off");
+      //     _pythia.readString("555:mayDecay = off");
+      //   }
+      // }
+      // else if (_hadron_mode == "all") {
+      
+      for (auto h: chadrons) _pythia.readString(to_string(h)+":mayDecay = off");
+      for (auto h: bhadrons) _pythia.readString(to_string(h)+":mayDecay = off");
+      
+      // }
+      if (tree.get<bool>("pythia.nuclearpdfs"), false) {
+        _pythia.readString("PDF:useHardNPDFA = on");
+        _pythia.readString("PDF:useHardNPDFB = on");
       }
+    }
+
+    // by default, pythia generation takes a new seed for each run from the clock time
+    if (tree.get<bool>("pythia.random", true)) {
+      _pythia.readString("Random:setSeed = on");
+      _pythia.readString("Random:seed = 0"); 
+    }
+    else {
+      cout << "is not random?" << endl;
+      _pythia.readString("Random:setSeed = on");
+      _pythia.readString("Random:seed = 42"); 
     }
 
     //* parameters for the event selection *//
@@ -111,6 +154,7 @@ void globalAnalysis::initialize_pythia(int label) {
     }
     _match_splitting = tree.get<bool>("selections.matchSplit", false);
     _apply_sd_to_all = tree.get<bool>("selections.applySDtoall", false);
+    _recursive_daughters = tree.get<bool>("selections.recursiveDaughters", false);
 
     //* parameters for the medium modification *//
     bool do_medium_mod = tree.get<bool>("medium.doMediumModification", false);
@@ -161,15 +205,33 @@ void globalAnalysis::initialize_pythia(int label) {
      _is_inclusive = false;
      _parton_ids = {constants::CHARM,constants::ANTICHARM};
      if (_is_parton_level) _particle_ids = {constants::CHARM,constants::ANTICHARM};
-     else _particle_ids = {constants::D0,constants::D0BAR};
+     else {
+      if (_hadron_mode == "D/B") _particle_ids = {constants::D0,constants::D0BAR};
+      else if (_hadron_mode == "measurable") _particle_ids = {constants::D0,constants::D0BAR};
+      else if (_hadron_mode == "all") {
+        for (int hadronid: chadrons) {
+          _particle_ids.push_back(hadronid);
+          _particle_ids.push_back(-hadronid);
+        }
+      }
+     }
      _file_label = "cc";
-     _medium_params.mc2 = pow(constants::CHARM_MASS, 2.0);        
+     _medium_params.mc2 = pow(constants::CHARM_MASS, 2.0);      
     }
     else if (event_type == "bb") {
       _is_inclusive = false;
       _parton_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
       if (_is_parton_level) _particle_ids = {constants::BOTTOM,constants::ANTIBOTTOM};
-      else _particle_ids = {constants::B0,constants::B0BAR};
+      else {
+        if (_hadron_mode == "D/B") _particle_ids = {constants::B0,constants::B0BAR};
+        else if (_hadron_mode == "measurable") _particle_ids = {constants::B0,constants::B0BAR};
+        else if (_hadron_mode == "all") {
+          for (int hadronid: bhadrons) {
+            _particle_ids.push_back(hadronid);
+            _particle_ids.push_back(-hadronid);
+          }
+        }
+      }
       _file_label = "bb";
       _medium_params.mc2 = pow(constants::BOTTOM_MASS, 2.0); 
     }

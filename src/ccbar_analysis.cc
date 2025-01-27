@@ -37,6 +37,17 @@ PseudoJet as_pseudojet( Particle& particle ){
   return pj;
 }
 
+PseudoJet as_pseudojet( vector<PseudoJet> particles ) {
+
+  JetDefinition jet_def(fastjet::antikt_algorithm, 5.0); // very large jet radius ensures all particles are within the jet radius
+  ClusterSequence cs(particles, jet_def);
+  // store all jets in the event above the min pT cut and sort them by pT
+  vector<PseudoJet> all_jets = sorted_by_pt( cs.inclusive_jets(0.0) );
+  
+  if (all_jets.size()!=1) cout << "ERROR in as_pseudojet: incorrect number of jets." << endl;
+  return all_jets[0];
+}
+
 
 /**
  * @brief helper function to determine if a particle is among the constituents of a jet
@@ -125,6 +136,43 @@ PseudoJet EventCCbar::follow_to_final_state( PseudoJet particle) {
   else return as_pseudojet( _py_event[current_index] );
 }
 
+
+void EventCCbar::add_daughter( PseudoJet particle, vector<PseudoJet>& daughters) {
+
+  int current_index = particle.user_info<ExtraInfo>().global_index(); // event index of the particle
+  int pid = particle.user_info<ExtraInfo>().pdg_id(); // its particle id
+  Particle& current_particle = _py_event[ current_index ]; // pythia particle associated with that particle
+
+  for (auto p: _final_particles) {
+    int cid = p.user_info<ExtraInfo>().global_index();
+    Particle& pp = _py_event[ cid ];
+    // cout << "outside and is final? " << pp.isFinal() << endl;
+    if ( pp.isFinal() && pp.isAncestor(current_index) ) {
+      daughters.push_back(p);
+    }
+  }
+
+  // for (auto p: current_particle.daughterListRecursive()) cout << _py_event[ p ].index() << ", ";
+
+  // if ( (_is_parton_level && !current_particle.isFinal()) || (!_is_parton_level && !current_particle.isFinalPartonLevel()) ) {
+
+  //   PseudoJet daughter1 = as_pseudojet( _py_event[current_particle.daughter1()] );
+  //   PseudoJet daughter2 = as_pseudojet( _py_event[current_particle.daughter2()] );
+  //   add_daughter( daughter1, daughters );
+  //   add_daughter( daughter2, daughters );
+  // }
+  // if ( (_is_parton_level && current_particle.isFinal()) || (!_is_parton_level && current_particle.isFinalPartonLevel())) {
+  //   daughters.push_back(particle);
+  // }
+}
+PseudoJet EventCCbar::all_daughters_until_final_state( PseudoJet particle) {
+
+  vector<PseudoJet> daughters;
+  add_daughter( particle, daughters );
+  return as_pseudojet( daughters );
+}
+
+
 /**
  * @brief read in a pythia event
  *  
@@ -141,10 +189,16 @@ void EventCCbar::read_event() {
     // perform cuts to remove particles that would have gone out of the detector
     if (p.pT() < _track_cuts.trackPtMin) continue;
     if (abs(p.eta()) > _track_cuts.trackEtaCut) continue;
-
-        // if hadronization is on, store tagged particles at parton-level to associate them later with the tagged hadrons
+    
+    // if hadronization is on, store tagged particles at parton-level to associate them later with the tagged hadrons
     if (!_is_parton_level && p.isFinalPartonLevel()) {
-      if (is_contained(p.id(), _parton_ids) && p.pT()>_track_cuts.HFPtMin) _tagged_partons.push_back( PseudoJet(p.px(), p.py(), p.pz(), p.e()) );
+      if (is_contained(p.id(), _parton_ids) && p.pT()>_track_cuts.HFPtMin) {
+        PseudoJet parton( p.px(), p.py(), p.pz(), p.e() );
+    
+        // store the particle id and global index as part of about the particle
+        parton.set_user_info(new ExtraInfo(p.id(), p.index()));
+        _tagged_partons.push_back( parton );
+      }
     }
 
     if (!p.isFinal()) continue; // otherwise, consider only final states
@@ -162,6 +216,8 @@ void EventCCbar::read_event() {
 
     if (_is_inclusive) continue; // no extra particle info to save, so we're done
 
+    //cout << "is 411 contained? " << is_contained(411, _particle_ids) << endl;
+
     // add a particle to tagged_particles if it has a particle id matching particle_ids, and if its pT is bigger than the low pT cut for heavy flavor 
     if (is_contained(p.id(), _particle_ids) && particle.perp()>_track_cuts.HFPtMin ) {
       _tagged_particles.push_back(particle);
@@ -170,6 +226,7 @@ void EventCCbar::read_event() {
   // sort the tagged particles by pT
   _tagged_particles = sorted_by_pt(_tagged_particles); 
   _has_pair = get_pair(); // set values for maxpt_tagged_particle and maxpt_tagged_antiparticle, and has_pair
+
 }
 
 
@@ -182,21 +239,30 @@ void EventCCbar::read_event() {
    // cluster final particles in the event according to the jet definition jet_def and save the associated cluster sequence for later
    vector<PseudoJet> all_jets;
 
-  ClusterSequence cs_umod(_final_particles, _jet_def);
+   ClusterSequence cs_umod(_final_particles, _jet_def);
    // store all jets in the event above the min pT cut and sort them by pT
    all_jets = sorted_by_pt( cs_umod.inclusive_jets(_track_cuts.JetPtMin) );
 
+   // if (all_jets.size() > 0) cout << "unmodified jets: ";
    for (auto jet: all_jets) {
 
      // reject jets that either don't have constituents or fall outside of the acceptance cuts of the analysis
      bool pass_jet_cuts = (jet.has_constituents() && jet.eta()>_track_cuts.JetEtaMin && jet.eta()<_track_cuts.JetEtaMax && jet.pt()>_track_cuts.JetPtMin && jet.pt()<_track_cuts.JetPtMax );
      if (!pass_jet_cuts) continue;
 
+    //  cout << jet.perp() << ", ";
+    //  cout << "jet has pair: " << get_pair(jet) << endl;
+    //   for (auto c: jet.constituents()) cout << c.user_info<ExtraInfo>().pdg_id() << ", ";
+    //   cout << endl;
+
+     // reject jets that should have a c-cbar pair, but don't
+     // if (!_is_inclusive && !get_pair(jet)) continue;
+
      if ( _unmodified_jets.size() < 2 ) _unmodified_jets.push_back(jet);
    }
 
    // to save computational time, only compute energy loss if at least some (unmodified) jets pass the cuts and satisfy the event selection criteria for the analysis
-   bool is_candidate_event = ( _unmodified_jets.size()>0 ) && _has_pair;
+   bool is_candidate_event = ( _unmodified_jets.size()>0 && (_has_pair || _is_inclusive) );
    
    if (_do_energy_loss && is_candidate_event) {
     _final_particles = compute_jet_modification( _final_particles, &_medium_params);
@@ -212,21 +278,94 @@ void EventCCbar::read_event() {
     // sort the tagged particles by pT
     _tagged_particles = sorted_by_pt(_tagged_particles);
    }
+   _has_pair = get_pair(); // reset _maxpt_tagged_particle and _maxpt_tagged_antiparticle
 
     ClusterSequence cs(_final_particles, _jet_def);
     _cluster_seq = cs;
     // store all jets in the event above the min pT cut and sort them by pT
     all_jets = sorted_by_pt( _cluster_seq.inclusive_jets(_track_cuts.JetPtMin) );
 
+    // if (all_jets.size() > 0) cout << "modified jets: ";
     for (auto jet: all_jets) {
 
       // reject jets that either don't have constituents or fall outside of the acceptance cuts of the analysis
       bool pass_jet_cuts = (jet.has_constituents() && jet.eta()>_track_cuts.JetEtaMin && jet.eta()<_track_cuts.JetEtaMax && jet.pt()>_track_cuts.JetPtMin && jet.pt()<_track_cuts.JetPtMax );
       if (!pass_jet_cuts) continue;
 
+      // reject jets that should have a c-cbar pair, but don't
+      // if (!_is_inclusive && !get_pair(jet)) continue;
+
       // add at most 2 highest pt jets from the event satisfying the cuts to the event's jets
       if ( _jets.size() < 2 ) _jets.push_back(jet);
    }
+}
+
+
+
+
+int EventCCbar::find_typical_initiator(PseudoJet jet) {
+
+  unordered_map<int, float> values;
+  int current_particle;
+  for (auto p: sorted_by_pt(jet.constituents())) {
+    current_particle = p.user_info<ExtraInfo>().global_index();
+    PseudoJet initiator = find_initiator(current_particle);
+    values[ initiator.user_info<ExtraInfo>().global_index() ] += p.perp();
+  }
+
+  auto maxPair = *std::max_element(
+    values.begin(), values.end(),
+    [](const auto& a, const auto& b) { return a.second < b.second; }
+  );
+
+  return _py_event[maxPair.first].id();
+
+}
+
+
+//   // status codes that pythia uses to identify incoming particles of various types (hard event, subevent, and initial state radiation)
+//   vector<int> incoming_status {constants::INCOMING_HARD, constants::INCOMING_SUB, constants::INCOMING_ISR};
+
+//   int current_particle, mother_particle;
+//   // current particle and other particle are the two highest-pT tagged particles
+//   current_particle = _maxpt_tagged_particle.user_info<ExtraInfo>().global_index();
+//   mother_particle = _py_event[ current_particle ].mother1();
+
+//   int i =0;
+
+//   cout << "inside: " << endl;
+//   // fix one of the particles (other particle) and trace back through the mothers of the other (current particle) until you find a common ancestor, or the beginning of the event
+//   while ( !is_contained( _py_event[ mother_particle ].status(), incoming_status ) && i<20 ) {
+//     // set current particle to its mother and continue
+//     cout << _py_event[current_particle].status() << ", ";
+//     current_particle = _py_event[ current_particle ].mother1();
+//     mother_particle = _py_event[ current_particle ].mother1();
+//     i++;
+//   }
+//   cout << endl;
+//   if (i==20) cout << "large i! " << _py_event[current_particle].status() << endl;
+//   return _py_event[current_particle];
+// }
+
+PseudoJet EventCCbar::find_initiator(int current_particle) {
+
+  // status codes that pythia uses to identify incoming particles of various types (hard event, subevent, and initial state radiation)
+  vector<int> incoming_status {constants::INCOMING_HARD, constants::INCOMING_SUB, constants::INCOMING_ISR};
+
+  int mother_particle;
+  // current particle and other particle are the two highest-pT tagged particles
+  // current_particle = _maxpt_tagged_particle.user_info<ExtraInfo>().global_index();
+  mother_particle = _py_event[ current_particle ].mother1();
+
+  // cout << "inside: " << endl;
+  // fix one of the particles (other particle) and trace back through the mothers of the other (current particle) until you find a common ancestor, or the beginning of the event
+  while ( !is_contained( _py_event[ mother_particle ].status(), incoming_status ) && _py_event[current_particle].status()!=-11 ) {
+    // set current particle to its mother and continue
+    current_particle = _py_event[ current_particle ].mother1();
+    mother_particle = _py_event[ current_particle ].mother1();
+  }
+
+  return as_pseudojet(_py_event[current_particle]);
 }
 
 
@@ -291,7 +430,7 @@ void EventCCbar::find_splitting() {
  * @param jetR: the allowable distance of the gluon from the jet axis. For most purposes, this should probably be the same as the jet radius
  * @return true if a splitting was found, false otherwise
  */
-bool EventCCbar::find_splitting_v2(PseudoJet jet, double jetR) {
+bool EventCCbar::find_splitting_v2(PseudoJet jet, double jetR, bool include_recursive_daughters) {
 
   int n_splittings = 0;
   double max_mother_pt = 0.0;
@@ -316,6 +455,12 @@ bool EventCCbar::find_splitting_v2(PseudoJet jet, double jetR) {
       }
     }
   }
+
+  // as a test, include all particles from the subsequent radiations in the MC-level definition
+  if (include_recursive_daughters) {
+    _splitting._in = all_daughters_until_final_state(_splitting._in);
+  }
+
   if (_splitting._out1.perp() < _splitting._out2.perp()) swap( _splitting._out1, _splitting._out2);
   _splitting.set_values();
   return n_splittings!=0;
@@ -377,14 +522,18 @@ bool EventCCbar::get_pair() {
 
 bool has_particle = false;
 bool has_antiparticle = false;
+double max_particle_pt = 0.0;
+double max_antiparticle_pt = 0.0;
 
 for (auto tp: _tagged_particles) {
-  if (tp.user_info<ExtraInfo>().pdg_id()>0 && tp.perp()>_maxpt_tagged_particle.perp() ) {
+  if (tp.user_info<ExtraInfo>().pdg_id()>0 && tp.perp()>max_particle_pt ) {
     _maxpt_tagged_particle = tp;
+    max_particle_pt = tp.perp();
     has_particle = true;
   }
-  if (tp.user_info<ExtraInfo>().pdg_id()<0 && tp.perp()>_maxpt_tagged_antiparticle.perp()) {
+  if (tp.user_info<ExtraInfo>().pdg_id()<0 && tp.perp()>max_antiparticle_pt) {
     _maxpt_tagged_antiparticle = tp;
+    max_antiparticle_pt = tp.perp();
     has_antiparticle = true;
   }
 }

@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
         evt._has_pair = evt.get_pair(jet);
         if (!evt._has_pair) continue;
 
-	      found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR);
+	      found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, analysis._recursive_daughters);
 	      if (!found_splitting) continue;
 
         if (analysis._match_splitting) {

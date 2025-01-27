@@ -54,6 +54,7 @@ int main(int argc, char* argv[]) {
   // track total number of jets, and total number of ccbar-tagged jets
   int Njets=0;
   int NHFjets=0;
+  double avgptHF=0.;
 
   bool jets_lose_energy = true;
   PseudoJet jet;
@@ -68,23 +69,31 @@ int main(int argc, char* argv[]) {
     evt._jet_def_recl = jet_def_recl;
 
     // read in particles from the pythia event
-    evt.read_event();
+    evt.read_event(); 
+
+    // if (!analysis._is_inclusive && !evt._has_pair) continue;
 
     // if inclusive, consider up to two jets that pass the cuts in an event
     // if not inclusive, consider up to two jets that pass the cuts and consider the one that has at least one pair of particles with the indices of tagged particles
     evt.cluster_jets();
-
-    //cout << "num jets: " << evt._jets.size() << endl;
 
     if (evt._jets.size()==0) continue; // event has no jets passing the selections
         
     for (int i=0; i<evt._jets.size(); i++) {
 
       Njets++;
+      // jet = evt._jets[i];
+
+      // evt._has_pair = evt.get_pair(jet);
+      // if (!evt._has_pair) continue;
+
+      // cout << "tagged particles: " << endl;
+      // for (auto tp: evt._tagged_particles) cout << tp.user_info<ExtraInfo>().pdg_id() << ", ";
+      // cout << endl;
 
       jet = evt._jets[i];
       double unmod_jet_pt = 0.0;
-      if (evt._unmodified_jets.size()==evt._jets.size()) unmod_jet_pt = evt._unmodified_jets[i].perp();
+      if (evt._unmodified_jets.size()>=evt._jets.size()) unmod_jet_pt = evt._unmodified_jets[i].perp();
 
       if (analysis._is_inclusive) {
         
@@ -100,17 +109,38 @@ int main(int argc, char* argv[]) {
 
       if (!analysis._is_inclusive) {
 
+        // if (iEvent<5) evt._py_event.list();
+
   evt._has_pair = evt.get_pair(jet);
 	if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
+
+    cout << "event number: " << iEvent << ",  jet number: " << i << endl;
+    cout << "tagged partons: ";
+    for (auto p: evt._tagged_partons) cout << p.user_info<ExtraInfo>().pdg_id() << " (" << p.perp() << "), ";
+    cout << endl;
+
+    cout << "tagged particles: ";
+    for (auto p: evt._tagged_particles) cout << p.user_info<ExtraInfo>().pdg_id() << " (" << p.perp() << "), ";
+    cout << endl;   
+  // cout << "new event" << endl;
+  // for (auto p: evt._tagged_particles) {
+  //   cout << p.user_info<ExtraInfo>().pdg_id() << ", " << p.perp() << ", " << p.eta() << ", " << p.phi() << endl;
+  // }
 
 	//Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
 
 	// evt.find_splitting();
-	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR);
-	if (!found_splitting) continue;
+  // cout << "trying to find splitting" << endl;
+	// found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, analysis._recursive_daughters);
+	// if (!found_splitting) continue;
+  // cout << "found splitting" << endl;
+
+  int init_pdg = evt.find_typical_initiator(jet);
+  //cout << "initiator: " << initiator.user_info<ExtraInfo>().global_index() << ", " << initiator.user_info<ExtraInfo>().pdg_id() << endl;
 
   if (analysis._match_splitting) {
+    cout << "this shouldn't happen" << endl;
 	  // when using find_splitting_v2, can choose to overwrite the maxpt tagged particles with the final-state version of the particles found by the function
 	  evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
 	  evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
@@ -120,6 +150,7 @@ int main(int argc, char* argv[]) {
   }
   
   NHFjets++;
+  avgptHF += (evt._maxpt_tagged_particle.perp() * evt._maxpt_tagged_antiparticle.perp()) / ( jet.perp() * jet.perp() );
 
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
 	params.z = evt._splitting._z;
@@ -129,8 +160,14 @@ int main(int argc, char* argv[]) {
             
 	tmp.set_to_zero();
 	EEC2(evt._tagged_particles, evt._tagged_particles, jet.pt(), tmp);
+
+  // cout << "and later" << endl;
+  // cout << evt._maxpt_tagged_particle.user_info<ExtraInfo>().pdg_id() << ", " << evt._maxpt_tagged_particle.perp() << endl;
+  // cout << evt._maxpt_tagged_antiparticle.user_info<ExtraInfo>().pdg_id() << ", " << evt._maxpt_tagged_antiparticle.perp() << endl;
 	
-	analysis._error_log << jet.perp() << ", " << unmod_jet_pt << ", " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << ", " << (evt._maxpt_tagged_particle + evt._maxpt_tagged_antiparticle).perp() << ", " << med_weight;
+	analysis._error_log << jet.perp() << ", " << unmod_jet_pt << ", " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << ", " << (evt._maxpt_tagged_particle + evt._maxpt_tagged_antiparticle).perp() << ", " << 2.*evt._splitting._Eg / (evt._splitting._virt*evt._splitting._virt) << ", " << evt._splitting._Eg << ", " << init_pdg  << ", " << med_weight;
+  // cout << jet.perp() << ", " << unmod_jet_pt << ", " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << ", " << (evt._maxpt_tagged_particle + evt._maxpt_tagged_antiparticle).perp() << ", " << 2.*evt._splitting._Eg / (evt._splitting._virt*evt._splitting._virt) << ", " << init_pdg  << ", " << med_weight << endl;
+  
   for (auto val: tmp._values) analysis._error_log << ", " << val;
   analysis._error_log << endl;
 
@@ -171,6 +208,7 @@ int main(int argc, char* argv[]) {
   analysis.write_histograms();
 
   analysis._error_log << "number of jets: " << Njets << ", number of HF jets: " << NHFjets << endl;
+  cout << "number of jets: " << Njets << ", number of HF jets: " << NHFjets << ", avg pt HF: " << avgptHF << endl;
 
   return 0;
 }

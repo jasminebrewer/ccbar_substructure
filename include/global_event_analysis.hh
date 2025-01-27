@@ -71,7 +71,7 @@ class globalAnalysis {
 public:
   // copy constructor
   globalAnalysis(globalAnalysis& analysis) : _pythia(analysis._pythia), _jet_algo(analysis._jet_algo), _jet_recl_algo(analysis._jet_recl_algo), _track_cuts(analysis._track_cuts), _is_parton_level(analysis._is_parton_level), _is_inclusive(analysis._is_inclusive),
-					     _particle_ids(analysis._particle_ids), _parton_ids(analysis._parton_ids), _medium_params(analysis._medium_params), _do_energy_loss(analysis._do_energy_loss) {}
+					     _particle_ids(analysis._particle_ids), _parton_ids(analysis._parton_ids), _medium_params(analysis._medium_params), _do_energy_loss(analysis._do_energy_loss), _recursive_daughters(analysis._recursive_daughters) {}
 
   // constructor a globalAnalysis instance from a pythia event and associated parameter file
   globalAnalysis(Pythia& pythia, string paramfile_name) : _pythia(pythia) {
@@ -98,12 +98,14 @@ public:
   string _FC_mode;                      // string specifying the type of flavor cone method to use
   bool _match_splitting;                // boolean specifying whether or not to match particles between pythia splitting and in the reclustering
   bool _apply_sd_to_all;                // boolean for whether to apply the softdrop cut to the whole jet, or just for the purpose of event selection
+  bool _recursive_daughters;            // boolean for whether to determine the "MC truth" based on just the splitting duaghters themselves (false) or recursively including all subsequent daughters (true)
 
   trackCuts _track_cuts;                // struct containing kinematic cuts for the analysis
   mediumParams _medium_params;          // struct containing parameters for the medium modification
 
   bool _do_energy_loss;                 // flag for whether to compute jet energy loss
   bool _is_parton_level;                // flag for whether the event is parton- or hadron-level
+  string _hadron_mode;                  // flag for whether to identify only D0/D0bar ('D/B') or all hadrons (or equivalently for B) ('all')
   bool _is_inclusive;                   // whether to tag particular particles in the event or consider all equally. If false, particle_ids should not be empty
   vector<int> _particle_ids;            // particle ids of particles to tag (e.g., c and cbar)
   vector<int> _parton_ids;              // for the case that hadronization is on, also set the ids of associated partons
