@@ -61,6 +61,7 @@ int main(int argc, char* argv[]) {
     EventCCbar evt(analysis);
     evt._jet_def = jet_def;
     evt._jet_def_recl = jet_def_recl;
+    evt._has_pair = false; // default value until otherwise specified
 
     // read in particles from the pythia event
     evt.read_event();
@@ -110,42 +111,42 @@ int main(int argc, char* argv[]) {
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
 
   // try out doing some level of soft drop on the rest of the jet
-  // if (analysis._apply_sd_to_all) jet = sd_jet;
+  if (analysis._apply_sd_to_all) jet = sd_jet;
 
 	//Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
 
 	// evt.find_splitting();
 	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, false);
-	// if (!found_splitting) continue;
+	if (!found_splitting) continue;
 
-  // if (analysis._match_splitting) {
-	//   // when using find_splitting_v2, can choose to overwrite the maxpt tagged particles with the final-state version of the particles found by the function
-	//   evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
-	//   evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
+  if (analysis._match_splitting) {
+	  // when using find_splitting_v2, can choose to overwrite the maxpt tagged particles with the final-state version of the particles found by the function
+	  evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
+	  evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
 
-	//   // make sure the jet contains these particles as well
-	//   if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
-  // }
+	  // make sure the jet contains these particles as well
+	  if (!contains(jet, evt._maxpt_tagged_particle) || !contains(jet, evt._maxpt_tagged_antiparticle)) continue;
+  }
 
-	// evt.calculate_splitting_level(); // calculate the level of the splitting found above
+	evt.calculate_splitting_level(); // calculate the level of the splitting found above
 
-	// recl_splitting = evt.do_iterative_reclustering(jet); // recluster the jet
+	recl_splitting = evt.do_iterative_reclustering(jet); // recluster the jet
 
-  // splitting_cc = evt.do_flavor_cone(analysis._FC_mode);
+  splitting_cc = evt.do_flavor_cone(analysis._FC_mode);
 
 
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
-	// params.z = evt._splitting._z;
-	// params.Eg = evt._splitting._Eg;
-	// params.pt2 = pow(evt._splitting._kt, 2.);
-	// med_weight = compute_medium_weight(&params, true); // gauss integration
+	params.z = evt._splitting._z;
+	params.Eg = evt._splitting._Eg;
+	params.pt2 = pow(evt._splitting._kt, 2.);
+	med_weight = compute_medium_weight(&params, true); // gauss integration
 
   // find a splitting again, except with recursive daughters
-  // if (analysis._recursive_daughters) found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, true);
+  if (analysis._recursive_daughters) found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, true);
   
-  analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << endl;
-  // analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
+  // analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << endl;
+  analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
       }
 
     }// end of jet loop

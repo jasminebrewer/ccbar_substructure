@@ -13,6 +13,7 @@ using namespace Pythia8;
 using namespace fastjet;
 using namespace std;
 
+
 /**
  * @brief helper function to determine if a value is contained within a vector
  * @param value
@@ -183,11 +184,15 @@ void EventCCbar::read_event() {
   vector<int> cids = {4,-4};
   vector<int> bids = {5,-5};
 
+  if (_tagged_partons.size()!=0) cout << "tagged partons size: " << _tagged_partons.size() << endl;
+  if (_tagged_particles.size()!=0) cout << "tagged particles size: " << _tagged_particles.size() << endl;
+  if (_has_pair) cout << "has pair?: " << _has_pair << endl;
+
   // loop over all particles in the event
   for (Particle& p: _py_event) {
 
     // perform cuts to remove particles that would have gone out of the detector
-    if (p.pT() < _track_cuts.trackPtMin) continue;
+    if (p.pT() < _track_cuts.trackPtMin)  continue;
     if (abs(p.eta()) > _track_cuts.trackEtaCut) continue;
     
     // if hadronization is on, store tagged particles at parton-level to associate them later with the tagged hadrons
@@ -215,8 +220,6 @@ void EventCCbar::read_event() {
     if (is_contained(p.id(), bids)) _tagged_bquarks.push_back(particle);
 
     if (_is_inclusive) continue; // no extra particle info to save, so we're done
-
-    //cout << "is 411 contained? " << is_contained(411, _particle_ids) << endl;
 
     // add a particle to tagged_particles if it has a particle id matching particle_ids, and if its pT is bigger than the low pT cut for heavy flavor 
     if (is_contained(p.id(), _particle_ids) && particle.perp()>_track_cuts.HFPtMin ) {
@@ -266,6 +269,10 @@ void EventCCbar::read_event() {
    
    if (_do_energy_loss && is_candidate_event) {
     _final_particles = compute_jet_modification( _final_particles, &_medium_params);
+    // vector<PseudoJet> new_final_particles;
+    // for (auto f: _final_particles) new_final_particles.push_back(scaleMomentum(f,0.8));
+    // _final_particles = new_final_particles;
+
 
     // update tagged particles and maxpt particle and antiparticle
     _tagged_particles.clear();
