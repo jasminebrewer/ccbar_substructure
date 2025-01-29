@@ -97,7 +97,7 @@ void globalAnalysis::initialize_pythia(int label) {
       for (auto h: bhadrons) _pythia.readString(to_string(h)+":mayDecay = off");
       
       // }
-      if (tree.get<bool>("pythia.nuclearpdfs"), false) {
+      if (tree.get<bool>("pythia.nuclearpdfs", false)) {
         _pythia.readString("PDF:useHardNPDFA = on");
         _pythia.readString("PDF:useHardNPDFB = on");
       }
