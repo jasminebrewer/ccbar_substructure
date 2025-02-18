@@ -86,12 +86,17 @@ int main(int argc, char* argv[]) {
       double unmod_jet_pt = 0.0;
       if (evt._unmodified_jets.size()>=evt._jets.size()) unmod_jet_pt = evt._unmodified_jets[i].perp();
 
+      // do soft-drop grooming on the jet to remove soft splittings                                                                                                  
+	    fastjet::PseudoJet sd_jet = sd(jet);
+
       if (analysis._is_inclusive) {
 
         Splitting rand_splitting = evt.get_random_splitting(jet);
         // evt.get_random_splitting(jet);
+
         
-        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << 0.0 << ", " << 1 << ", " << 0 << ", " << rand_splitting._Eg << ", " << rand_splitting._pt << ", " << rand_splitting._kt << ", " << rand_splitting._z << ", " << rand_splitting._dR << ", " << rand_splitting._virt << endl;
+        
+        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R() << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry() << ", " << sd_jet.perp() << ", " << 0.0 << ", " << 1 << ", " << 0 << ", " << rand_splitting._Eg << ", " << rand_splitting._pt << ", " << rand_splitting._kt << ", " << rand_splitting._z << ", " << rand_splitting._dR << ", " << rand_splitting._virt << endl;
       }
 
       if (!analysis._is_inclusive) {
@@ -103,9 +108,6 @@ int main(int argc, char* argv[]) {
   if (!evt._has_pair) continue;
 
   // if ( (evt._maxpt_tagged_particle+evt._maxpt_tagged_antiparticle).perp() < 0.2*jet.perp()) continue;
-
-	// do soft-drop grooming on the jet to remove soft splittings                                                                                                  
-	fastjet::PseudoJet sd_jet = sd(jet);
 
 	// // reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
@@ -134,6 +136,17 @@ int main(int argc, char* argv[]) {
 	recl_splitting = evt.do_iterative_reclustering(jet); // recluster the jet
 
   splitting_cc = evt.do_flavor_cone(analysis._FC_mode);
+
+  // params.z = 0.1;
+	// params.Eg = 10;
+	// params.pt2 = pow(10., 2.);
+  // params.L = 4;
+	// med_weight = compute_medium_weight(&params, true); // gauss integration
+  // cout << setprecision(10) << "weight (L=4): " << med_weight << endl;
+
+  // params.L = 2;
+	// med_weight = compute_medium_weight(&params, true); // gauss integration
+  // cout << setprecision(10) << "weight (L=2): " << med_weight << endl;
 
 
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
