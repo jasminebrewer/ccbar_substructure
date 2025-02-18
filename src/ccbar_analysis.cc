@@ -181,12 +181,8 @@ PseudoJet EventCCbar::all_daughters_until_final_state( PseudoJet particle) {
  */
 void EventCCbar::read_event() {
 
-  vector<int> cids = {4,-4};
-  vector<int> bids = {5,-5};
-
-  if (_tagged_partons.size()!=0) cout << "tagged partons size: " << _tagged_partons.size() << endl;
-  if (_tagged_particles.size()!=0) cout << "tagged particles size: " << _tagged_particles.size() << endl;
-  if (_has_pair) cout << "has pair?: " << _has_pair << endl;
+  // vector<int> cids = {4,-4};
+  // vector<int> bids = {5,-5};
 
   // loop over all particles in the event
   for (Particle& p: _py_event) {
@@ -216,8 +212,8 @@ void EventCCbar::read_event() {
     
     _final_particles.push_back(particle);
 
-    if (is_contained(p.id(), cids)) _tagged_cquarks.push_back(particle);
-    if (is_contained(p.id(), bids)) _tagged_bquarks.push_back(particle);
+    // if (is_contained(p.id(), cids)) _tagged_cquarks.push_back(particle);
+    // if (is_contained(p.id(), bids)) _tagged_bquarks.push_back(particle);
 
     if (_is_inclusive) continue; // no extra particle info to save, so we're done
 
@@ -253,11 +249,6 @@ void EventCCbar::read_event() {
      bool pass_jet_cuts = (jet.has_constituents() && jet.eta()>_track_cuts.JetEtaMin && jet.eta()<_track_cuts.JetEtaMax && jet.pt()>_track_cuts.JetPtMin && jet.pt()<_track_cuts.JetPtMax );
      if (!pass_jet_cuts) continue;
 
-    //  cout << jet.perp() << ", ";
-    //  cout << "jet has pair: " << get_pair(jet) << endl;
-    //   for (auto c: jet.constituents()) cout << c.user_info<ExtraInfo>().pdg_id() << ", ";
-    //   cout << endl;
-
      // reject jets that should have a c-cbar pair, but don't
      // if (!_is_inclusive && !get_pair(jet)) continue;
 
@@ -266,13 +257,9 @@ void EventCCbar::read_event() {
 
    // to save computational time, only compute energy loss if at least some (unmodified) jets pass the cuts and satisfy the event selection criteria for the analysis
    bool is_candidate_event = ( _unmodified_jets.size()>0 && (_has_pair || _is_inclusive) );
-   
+
    if (_do_energy_loss && is_candidate_event) {
     _final_particles = compute_jet_modification( _final_particles, &_medium_params);
-    // vector<PseudoJet> new_final_particles;
-    // for (auto f: _final_particles) new_final_particles.push_back(scaleMomentum(f,0.8));
-    // _final_particles = new_final_particles;
-
 
     // update tagged particles and maxpt particle and antiparticle
     _tagged_particles.clear();
@@ -310,7 +297,7 @@ void EventCCbar::read_event() {
 
 
 
-int EventCCbar::find_typical_initiator(PseudoJet jet) {
+std::pair<int,int> EventCCbar::find_typical_initiator(PseudoJet jet) {
 
   unordered_map<int, float> values;
   int current_particle;
@@ -325,7 +312,7 @@ int EventCCbar::find_typical_initiator(PseudoJet jet) {
     [](const auto& a, const auto& b) { return a.second < b.second; }
   );
 
-  return _py_event[maxPair.first].id();
+  return {_py_event[maxPair.first].id(), _py_event[maxPair.first].status()};
 
 }
 
@@ -357,14 +344,13 @@ int EventCCbar::find_typical_initiator(PseudoJet jet) {
 PseudoJet EventCCbar::find_initiator(int current_particle) {
 
   // status codes that pythia uses to identify incoming particles of various types (hard event, subevent, and initial state radiation)
-  vector<int> incoming_status {constants::INCOMING_HARD, constants::INCOMING_SUB, constants::INCOMING_ISR};
+  vector<int> incoming_status {constants::INCOMING_HARD, constants::INCOMING_SUB, constants::INCOMING_ISR, constants::INCOMING_BEAM_REMNANT};
 
   int mother_particle;
   // current particle and other particle are the two highest-pT tagged particles
   // current_particle = _maxpt_tagged_particle.user_info<ExtraInfo>().global_index();
   mother_particle = _py_event[ current_particle ].mother1();
 
-  // cout << "inside: " << endl;
   // fix one of the particles (other particle) and trace back through the mothers of the other (current particle) until you find a common ancestor, or the beginning of the event
   while ( !is_contained( _py_event[ mother_particle ].status(), incoming_status ) && _py_event[current_particle].status()!=-11 ) {
     // set current particle to its mother and continue

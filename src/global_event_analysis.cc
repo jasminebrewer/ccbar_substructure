@@ -27,8 +27,8 @@ void globalAnalysis::initialize_pythia(int label) {
     boost::property_tree::ptree tree;
     boost::property_tree::ini_parser::read_ini(_parameter_file, tree);
 
-    set<int> chadrons = {411,421,10411,10421,413,423,10413,10423,20413,20423,415,425,431,10431,433,10433,20433,435,4122,4222,4212,4112,4224,4214,4232,4132,4322,4312,4324,4314,4332,4334,4412,4422,4414,4424,4432,4434,4444,441,10441,100441,443,10443,20443,100443,30443,445};
-    set<int> bhadrons = {511,521,513,523,515,525,531,533,535,541,543,545,10511,10521,10513,10523,20513,20523,10531,10533,20533,10541,10543,20543,5122,5112,5212,5222,5114,5214,5224,5132,5232,5312,5322,5314,5324,5332,5334,5142,5242,5412,5422,5414,5424,5342,5432,5434,5442,5444,5512,5522,5514,5524,5532,5534,5542,5544,5554,551,10551,553,10553,20553,100553,200553,555};
+    set<int> chadrons = {411,421,431,4122,4212,4112,4232,4132,4332,441,443,445};
+    set<int> bhadrons = {511,521,531,541,5122,5112,5212,5222,5132,5232,5332,5142,5242,5342,5442,5512,5522,5532,5542,5554,551,553,555};
 
     //* load parameters for the pythia generation *//
 
@@ -68,7 +68,13 @@ void globalAnalysis::initialize_pythia(int label) {
         throw invalid_argument("Invalid mode specified for hadrons: " + _hadron_mode);
     }
 
-    //_include_all_hadrons = tree.get<bool>("pythia.includeAllHadrons", false);
+    if (tree.get<bool>("pythia.nuclearpdfs", false)) {
+      _pythia.readString("PDF:useHardNPDFA = on");
+      _pythia.readString("PDF:useHardNPDFB = on");
+      int pdfset = tree.get<int>("pythia.npdfset", 1); // EPPS09-LO default
+      _pythia.readString("PDF:nPDFSetA = "+to_string(pdfset)); 
+      _pythia.readString("PDF:nPDFSetB = "+to_string(pdfset)); // EPPS16-NLO
+    }
 
     if (_is_parton_level) {
       _pythia.readString("HadronLevel:all = off");
@@ -96,11 +102,6 @@ void globalAnalysis::initialize_pythia(int label) {
       for (auto h: chadrons) _pythia.readString(to_string(h)+":mayDecay = off");
       for (auto h: bhadrons) _pythia.readString(to_string(h)+":mayDecay = off");
       
-      // }
-      if (tree.get<bool>("pythia.nuclearpdfs", false)) {
-        _pythia.readString("PDF:useHardNPDFA = on");
-        _pythia.readString("PDF:useHardNPDFB = on");
-      }
     }
 
     // by default, pythia generation takes a new seed for each run from the clock time
@@ -109,7 +110,6 @@ void globalAnalysis::initialize_pythia(int label) {
       _pythia.readString("Random:seed = 0"); 
     }
     else {
-      cout << "is not random?" << endl;
       _pythia.readString("Random:setSeed = on");
       _pythia.readString("Random:seed = 42"); 
     }
