@@ -16,10 +16,11 @@ SRCS = src/global_event_analysis.cc src/ccbar_analysis.cc src/EEC.cc src/splitti
 OBJS = $(SRCS:src/%.cc=build/%.o)
 
 # Define the two executables and their respective main files
-TARGETS = build/compute_substructure build/compute_EEC build/compute_spectra
+TARGETS = build/compute_substructure build/compute_EEC build/compute_spectra build/simple_energy_loss
 MAIN_SUB = src/compute_substructure.cc
 MAIN_EEC = src/compute_EEC.cc
 MAIN_SPEC = src/compute_spectra.cc
+MAIN_SIMPLE = src/simple_energy_loss.cc
 
 # Default target - build both executables
 all: $(TARGETS)
@@ -33,6 +34,9 @@ build/compute_EEC: $(OBJS) build/compute_EEC.o
 build/compute_spectra: $(OBJS) build/compute_spectra.o
 	$(CXX) $(OBJS) build/compute_spectra.o -o build/compute_spectra $(LDFLAGS) $(LDLIBS)
 
+build/simple_energy_loss: $(OBJS) build/simple_energy_loss.o
+	$(CXX) $(OBJS) build/simple_energy_loss.o -o build/simple_energy_loss $(LDFLAGS) $(LDLIBS)
+
 build/compute_substructure.o: $(MAIN_SUB)
 	$(CXX) $(CXXFLAGS) -c $(MAIN_SUB) -o build/compute_substructure.o
 
@@ -41,6 +45,9 @@ build/compute_EEC.o: $(MAIN_EEC)
 
 build/compute_spectra.o: $(MAIN_SPEC)
 	$(CXX) $(CXXFLAGS) -c $(MAIN_SPEC) -o build/compute_spectra.o
+
+build/simple_energy_loss.o: $(MAIN_SIMPLE)
+	$(CXX) $(CXXFLAGS) -c $(MAIN_SIMPLE) -o build/simple_energy_loss.o
 
 # Rule to compile the shared modules
 build/%.o: src/%.cc
