@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
   globalAnalysis analysis(pythia, static_cast<std::string>(argv[1]));
   analysis.initialize_pythia(label);
 
-  vector<std::string> histogram_names {"eec2_all_"+to_string(label), "eec2_part_"+to_string(label), "eec2_part_cc_"+to_string(label), "eec2_part_bb_"+to_string(label), "eec3_all_"+to_string(label), "eec3_part_"+to_string(label), "eec2_med_all_"+to_string(label), "eec2_med_part_"+to_string(label), "eec3_med_all_"+to_string(label), "eec3_med_part_"+to_string(label)};
+  vector<std::string> histogram_names {"eec2_all_"+to_string(label), "eec2_part_"+to_string(label), "eec2_part_inc_"+to_string(label), "eec2_part_cc_"+to_string(label), "eec2_part_bb_"+to_string(label), "eec3_all_"+to_string(label), "eec3_part_"+to_string(label), "eec2_med_all_"+to_string(label), "eec2_med_part_"+to_string(label), "eec3_med_all_"+to_string(label), "eec3_med_part_"+to_string(label)};
   analysis.declare_histograms(histogram_names);
 
   Histogram tmp(analysis._track_cuts.eecMin, analysis._track_cuts.eecMax, analysis._track_cuts.eec_bin_size);
@@ -96,8 +96,25 @@ int main(int argc, char* argv[]) {
       if (evt._unmodified_jets.size()>=evt._jets.size()) unmod_jet_pt = evt._unmodified_jets[i].perp();
 
       if (analysis._is_inclusive) {
-        
-        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << endl;
+
+	      auto initiator = evt.find_typical_initiator(jet);
+
+        // for comparison with heavy quark case, get a random splitting inside the jet
+        auto rand_split = evt.get_random_splitting(jet);
+        vector<PseudoJet> random_particles = {rand_split._out1, rand_split._out2};
+
+        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << initiator.first << ", " << initiator.second;
+
+        tmp.set_to_zero();
+	      EEC2(random_particles, random_particles, jet.pt(), tmp);
+
+        for (auto val: tmp._values) analysis._error_log << ", " << val;
+        analysis._error_log << endl;
+
+        tmp.set_to_zero();
+	      EEC2(random_particles, random_particles, jet.pt(), tmp);
+	      analysis._histograms.at("eec2_part_inc_"+to_string(label)).add(tmp._values);
+
         tmp.set_to_zero();
 	      EEC2(evt._tagged_cquarks, evt._tagged_cquarks, jet.pt(), tmp);
 	      analysis._histograms.at("eec2_part_cc_"+to_string(label)).add(tmp._values);
@@ -114,33 +131,17 @@ int main(int argc, char* argv[]) {
   evt._has_pair = evt.get_pair(jet);
 	if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
 
-    cout << "event number: " << iEvent << ",  jet number: " << i << endl;
-    cout << "tagged partons: ";
-    for (auto p: evt._tagged_partons) cout << p.user_info<ExtraInfo>().pdg_id() << " (" << p.perp() << "), ";
-    cout << endl;
-
-    cout << "tagged particles: ";
-    for (auto p: evt._tagged_particles) cout << p.user_info<ExtraInfo>().pdg_id() << " (" << p.perp() << "), ";
-    cout << endl;   
-  // cout << "new event" << endl;
-  // for (auto p: evt._tagged_particles) {
-  //   cout << p.user_info<ExtraInfo>().pdg_id() << ", " << p.perp() << ", " << p.eta() << ", " << p.phi() << endl;
-  // }
 
 	//Splitting hardest_split = evt.find_hardest_splitting(jet);
 	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
 
-	// evt.find_splitting();
-  // cout << "trying to find splitting" << endl;
-	// found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, analysis._recursive_daughters);
-	// if (!found_splitting) continue;
-  // cout << "found splitting" << endl;
+	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, analysis._recursive_daughters);
+	if (!found_splitting) continue;
 
-  int init_pdg = evt.find_typical_initiator(jet);
+  auto initiator = evt.find_typical_initiator(jet);
   //cout << "initiator: " << initiator.user_info<ExtraInfo>().global_index() << ", " << initiator.user_info<ExtraInfo>().pdg_id() << endl;
 
   if (analysis._match_splitting) {
-    cout << "this shouldn't happen" << endl;
 	  // when using find_splitting_v2, can choose to overwrite the maxpt tagged particles with the final-state version of the particles found by the function
 	  evt._maxpt_tagged_particle = evt.follow_to_final_state(evt._splitting._out1);
 	  evt._maxpt_tagged_antiparticle = evt.follow_to_final_state(evt._splitting._out2);
@@ -160,13 +161,8 @@ int main(int argc, char* argv[]) {
             
 	tmp.set_to_zero();
 	EEC2(evt._tagged_particles, evt._tagged_particles, jet.pt(), tmp);
-
-  // cout << "and later" << endl;
-  // cout << evt._maxpt_tagged_particle.user_info<ExtraInfo>().pdg_id() << ", " << evt._maxpt_tagged_particle.perp() << endl;
-  // cout << evt._maxpt_tagged_antiparticle.user_info<ExtraInfo>().pdg_id() << ", " << evt._maxpt_tagged_antiparticle.perp() << endl;
 	
-	analysis._error_log << jet.perp() << ", " << unmod_jet_pt << ", " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << ", " << (evt._maxpt_tagged_particle + evt._maxpt_tagged_antiparticle).perp() << ", " << 2.*evt._splitting._Eg / (evt._splitting._virt*evt._splitting._virt) << ", " << evt._splitting._Eg << ", " << init_pdg  << ", " << med_weight;
-  // cout << jet.perp() << ", " << unmod_jet_pt << ", " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << ", " << (evt._maxpt_tagged_particle + evt._maxpt_tagged_antiparticle).perp() << ", " << 2.*evt._splitting._Eg / (evt._splitting._virt*evt._splitting._virt) << ", " << init_pdg  << ", " << med_weight << endl;
+	analysis._error_log << jet.perp() << ", " << unmod_jet_pt << ", " << evt._maxpt_tagged_particle.perp() << ", " << evt._maxpt_tagged_antiparticle.perp() << ", " << (evt._maxpt_tagged_particle + evt._maxpt_tagged_antiparticle).perp() << ", " << 2.*evt._splitting._Eg / (evt._splitting._virt*evt._splitting._virt) << ", " << evt._splitting._Eg << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " <<  evt._splitting._dR << ", " << initiator.first << ", " << initiator.second << ", " << med_weight;
   
   for (auto val: tmp._values) analysis._error_log << ", " << val;
   analysis._error_log << endl;

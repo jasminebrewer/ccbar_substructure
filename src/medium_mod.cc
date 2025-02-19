@@ -75,16 +75,17 @@ double med_splitting(void * p, bool gauss_integrator) {
   auto f = [&params](double x) {
     return integrand(x, &params);
   };
-  double termination = 1.e-9;//std::sqrt(std::numeric_limits<double>::epsilon());
+  double termination = 1.e-10;//std::sqrt(std::numeric_limits<double>::epsilon());
 
   // the gauss_kronrod integration works typically better than the tanh_sinh, which fails epically on (relatively rare) occasion
   if (!gauss_integrator) {
-    size_t max_halvings = 50;
+    size_t max_halvings = 200;
     boost::math::quadrature::tanh_sinh<double> integrator(max_halvings);
     result = integrator.integrate(f, 0.0, 1.0, termination, &error, &L1);
   }
   else {
-    result = boost::math::quadrature::gauss_kronrod<double, 15>::integrate(f, 0.0, 1.0, 10, termination, &error);
+    // result = boost::math::quadrature::gauss_kronrod<double, 15>::integrate(f, 0.0, 1.0, 10, termination, &error);
+    result = boost::math::quadrature::gauss_kronrod<double, 15>::integrate(f, 0.0, 1.0, 15, termination, &error);
   }
   return result;
 }

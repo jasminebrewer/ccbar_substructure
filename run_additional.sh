@@ -12,8 +12,8 @@ cd ${RUN_DIR}
 
 for VARIABLE in {31..90}
 do
-    # addqueue -c "1 day" ${BUILD_DIR}/compute_EEC ${2} $VARIABLE
-    addqueue -c "1 day" ${BUILD_DIR}/compute_substructure params_sub.ini $VARIABLE
+    addqueue -c "1 day" ${BUILD_DIR}/compute_EEC params_EEC.ini $VARIABLE
+    # addqueue -c "1 day" ${BUILD_DIR}/compute_substructure params_sub.ini $VARIABLE
 done
 
 #addqueue -c "1 day" ${BUILD_DIR}/compute_substructure ${2}
