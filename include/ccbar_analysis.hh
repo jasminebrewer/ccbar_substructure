@@ -28,7 +28,7 @@ public:
   void find_splitting();
   bool find_splitting_v2(PseudoJet jet, double jetR, bool include_recursive_daughters);
   PseudoJet find_initiator(int current_particle);
-  int find_typical_initiator(PseudoJet jet);
+  std::pair<int,int> find_typical_initiator(PseudoJet jet);
   void calculate_splitting_level();
   PseudoJet follow_to_final_state(PseudoJet particle);
   void add_daughter( PseudoJet particle, vector<PseudoJet>& daughters);
