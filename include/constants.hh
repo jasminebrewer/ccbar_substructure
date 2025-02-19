@@ -22,6 +22,7 @@ namespace constants
   const int INCOMING_HARD = -21; // incoming from hard process
   const int INCOMING_SUB = -31; // incoming from subprocess
   const int INCOMING_ISR = -41; // incoming from initial state radiation
+  const int INCOMING_BEAM_REMNANT = -12;
   const int OUTGOING_HARD = -23; // outgoing from hard process
   const int OUTGOING_SUB = -33; // outgoing from subprocess
   const int OUTGOING_ISR = -43; // outgoing from initial state radiation
