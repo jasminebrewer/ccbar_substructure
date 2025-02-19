@@ -92,11 +92,15 @@ int main(int argc, char* argv[]) {
       if (analysis._is_inclusive) {
 
         Splitting rand_splitting = evt.get_random_splitting(jet);
+
         // evt.get_random_splitting(jet);
+
+        auto initiator = evt.find_typical_initiator(jet);
 
         
         
-        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R() << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry() << ", " << sd_jet.perp() << ", " << 0.0 << ", " << 1 << ", " << 0 << ", " << rand_splitting._Eg << ", " << rand_splitting._pt << ", " << rand_splitting._kt << ", " << rand_splitting._z << ", " << rand_splitting._dR << ", " << rand_splitting._virt << endl;
+        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R() << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry() << ", " << sd_jet.perp() << ", " << initiator.first << ", " << initiator.second << endl;
+        //<< 0.0 << ", " << 1 << ", " << 0 << ", " << rand_splitting._Eg << ", " << rand_splitting._pt << ", " << rand_splitting._kt << ", " << rand_splitting._z << ", " << rand_splitting._dR << ", " << rand_splitting._virt << endl;
       }
 
       if (!analysis._is_inclusive) {
