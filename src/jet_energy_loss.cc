@@ -9,7 +9,7 @@
 using namespace fastjet;
 using namespace std;
 
-struct energy_loss_params {double qL; double L; double omega_c; double n; double T; double alpha_med; double jetR;}; 
+struct energy_loss_params {double qL; double L; double n; double T; double alpha_med; double jetR;}; 
 
 bool is_quark( int pid ) {
     if ( abs(pid) >=1 && abs(pid) <=6 ) return true;
@@ -117,10 +117,12 @@ double compute_quenching_weight(int flavor, double pT, void * p) {
     struct mediumParams * params = (struct mediumParams *)p;
     double qhatL = params->qL;
     double jetR = params->jetR;
-    double omega_c = params->omega_c;
     double n = params->n;
     double T = params->T;
     double alpha_med = params->alpha_med;
+
+    double L = params->L;
+    double omega_c = qhatL* L / 2.;
 
     double omega_s = pow( alpha_med*constants::Nc / M_PI, 2. ) * omega_c;
     double alpha = pow( 2.*pT*jetR / (sqrt(qhatL) * n), 2. );

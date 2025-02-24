@@ -172,7 +172,7 @@ void globalAnalysis::initialize_pythia(int label) {
 
         if (!_is_parton_level) throw invalid_argument("Invalid parameter selection: energy loss is currently only possible for parton-level events!");
 
-        _medium_params.omega_c = tree.get<double>("medium.omegac", 60.);
+        // _medium_params.omega_c = tree.get<double>("medium.omegac", 60.);
         _medium_params.n = tree.get<double>("medium.n", 6.);
         _medium_params.T = tree.get<double>("medium.T", 0.3);
         _medium_params.alpha_med = tree.get<double>("medium.alphaMed", 0.1);
