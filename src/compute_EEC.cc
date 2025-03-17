@@ -115,31 +115,17 @@ int main(int argc, char* argv[]) {
 	      EEC2(random_particles, random_particles, jet.pt(), tmp);
 	      analysis._histograms.at("eec2_part_inc_"+to_string(label)).add(tmp._values);
 
-        tmp.set_to_zero();
-	      EEC2(evt._tagged_cquarks, evt._tagged_cquarks, jet.pt(), tmp);
-	      analysis._histograms.at("eec2_part_cc_"+to_string(label)).add(tmp._values);
-
-	      tmp.set_to_zero();
-	      EEC2(evt._tagged_bquarks, evt._tagged_bquarks, jet.pt(), tmp);
-	      analysis._histograms.at("eec2_part_bb_"+to_string(label)).add(tmp._values);
       }
 
       if (!analysis._is_inclusive) {
 
-        // if (iEvent<5) evt._py_event.list();
-
   evt._has_pair = evt.get_pair(jet);
 	if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
-
-
-	//Splitting hardest_split = evt.find_hardest_splitting(jet);
-	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
 
 	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, analysis._recursive_daughters);
 	if (!found_splitting) continue;
 
   auto initiator = evt.find_typical_initiator(jet);
-  //cout << "initiator: " << initiator.user_info<ExtraInfo>().global_index() << ", " << initiator.user_info<ExtraInfo>().pdg_id() << endl;
 
   if (analysis._match_splitting) {
 	  // when using find_splitting_v2, can choose to overwrite the maxpt tagged particles with the final-state version of the particles found by the function

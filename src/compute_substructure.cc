@@ -74,10 +74,6 @@ int main(int argc, char* argv[]) {
     // if do_energy_loss is true, first modify the particles and then perform jet selections
     evt.cluster_jets();
 
-    // cout << "in main, after energy loss, final particles[0]: size " << evt._final_particles.size() << "; ";
-    // for (auto p: evt._final_particles) cout << p.perp() << " (" << p.user_info<ExtraInfo>().global_index() << "), ";
-    // cout << endl;
-
     if (evt._jets.size()==0) continue; // event has no jets passing the selections
         
     for (int i=0; i<evt._jets.size(); i++) {
@@ -91,27 +87,25 @@ int main(int argc, char* argv[]) {
 
       if (analysis._is_inclusive) {
 
-        Splitting rand_splitting = evt.get_random_splitting(jet);
+        if (evt._unmodified_jets.size()<evt._jets.size()) continue;
 
-        // evt.get_random_splitting(jet);
+        fastjet::PseudoJet unmod_sd_jet = sd( evt._unmodified_jets[i] );
+
+        Splitting rand_splitting = evt.get_random_splitting(jet);
 
         auto initiator = evt.find_typical_initiator(jet);
 
         
         
-        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R() << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry() << ", " << sd_jet.perp() << ", " << initiator.first << ", " << initiator.second << endl;
+        analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R() << ", " << unmod_sd_jet.structure_of<fastjet::contrib::SoftDrop>().delta_R() << ", " << sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry() << ", " << unmod_sd_jet.structure_of<fastjet::contrib::SoftDrop>().symmetry() << ", " << sd_jet.perp() << ", " << initiator.first << ", " << initiator.second << endl;
         //<< 0.0 << ", " << 1 << ", " << 0 << ", " << rand_splitting._Eg << ", " << rand_splitting._pt << ", " << rand_splitting._kt << ", " << rand_splitting._z << ", " << rand_splitting._dR << ", " << rand_splitting._virt << endl;
       }
 
       if (!analysis._is_inclusive) {
 
-	//if (!evt._has_pair) continue; // continue if the event doesn't have a particle/anti-particle pair
-
   // check if the jet contains at least two of the tagged_particles
   evt._has_pair = evt.get_pair(jet);
   if (!evt._has_pair) continue;
-
-  // if ( (evt._maxpt_tagged_particle+evt._maxpt_tagged_antiparticle).perp() < 0.2*jet.perp()) continue;
 
 	// // reject jets that do not contain both the maxpt particle and the maxpt antiparticle after the softdrop grooming
 	if (! (contains(sd_jet, evt._maxpt_tagged_particle) && contains(sd_jet, evt._maxpt_tagged_antiparticle)) ) continue;
@@ -119,10 +113,6 @@ int main(int argc, char* argv[]) {
   // try out doing some level of soft drop on the rest of the jet
   if (analysis._apply_sd_to_all) jet = sd_jet;
 
-	//Splitting hardest_split = evt.find_hardest_splitting(jet);
-	//cout << "hardest split: " << evt._py_event[hardest_split._in_index].id() << " -> " << evt._py_event[hardest_split._out1_index].id() << ", " << evt._py_event[hardest_split._out2_index].id() << endl;
-
-	// evt.find_splitting();
 	found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, false);
 	if (!found_splitting) continue;
 
@@ -141,18 +131,6 @@ int main(int argc, char* argv[]) {
 
   splitting_cc = evt.do_flavor_cone(analysis._FC_mode);
 
-  // params.z = 0.1;
-	// params.Eg = 10;
-	// params.pt2 = pow(10., 2.);
-  // params.L = 4;
-	// med_weight = compute_medium_weight(&params, true); // gauss integration
-  // cout << setprecision(10) << "weight (L=4): " << med_weight << endl;
-
-  // params.L = 2;
-	// med_weight = compute_medium_weight(&params, true); // gauss integration
-  // cout << setprecision(10) << "weight (L=2): " << med_weight << endl;
-
-
 	// use the parameters from the pythia event to compute the weight of the event for the medium modification
 	params.z = evt._splitting._z;
 	params.Eg = evt._splitting._Eg;
@@ -162,7 +140,6 @@ int main(int argc, char* argv[]) {
   // find a splitting again, except with recursive daughters
   if (analysis._recursive_daughters) found_splitting = evt.find_splitting_v2(jet, analysis._track_cuts.jetR, true);
   
-  // analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << endl;
   analysis._error_log << jet.perp() << ", "<< unmod_jet_pt << ", " << med_weight << ", " << evt._splitting._is_valid << ", " << evt._splitting._level << ", " << evt._splitting._Eg << ", " << evt._splitting._pt << ", " << evt._splitting._kt << ", " << evt._splitting._z << ", " << evt._splitting._dR << ", " << evt._splitting._virt << ", " << recl_splitting._is_primary << ", " << recl_splitting._level << ", " << recl_splitting._Eg << ", " << recl_splitting._pt << ", " << recl_splitting._kt << ", " << recl_splitting._z << ", " << recl_splitting._dR << ", " << recl_splitting._virt << ", " << splitting_cc._Eg << ", " << splitting_cc._pt << ", " << splitting_cc._kt << ", " << splitting_cc._z << ", " << splitting_cc._dR << ", " << splitting_cc._virt << endl;
       }
 
@@ -171,11 +148,6 @@ int main(int argc, char* argv[]) {
   }// end of event loop. 
   // statistics
   analysis._pythia.stat();
-
-  // analysis.normalize_histograms();
-
-
-  // analysis.write_histograms();
 
   return 0;
 }

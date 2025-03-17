@@ -2,12 +2,20 @@
 #include "fastjet/ClusterSequence.hh"
 #include <gsl/gsl_integration.h>
 #include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/special_functions/erf.hpp>
 #include "constants.hh"
 #include "ccbar_analysis.hh"
-//#include <unordered_set>
 
 using namespace fastjet;
 using namespace std;
+
+double erf_diff(double x, double y) {
+    if (std::abs(x - y) < 5.e-2) {  // Small difference: use stable formula
+        return (2.0 / std::sqrt(M_PI)) * std::exp(-x*x) * boost::math::erfc(x) * (x - y);
+    } else {  // Regular case
+        return boost::math::erf(x) - boost::math::erf(y);
+    }
+}
 
 struct energy_loss_params {double qL; double L; double n; double T; double alpha_med; double jetR;}; 
 
@@ -76,13 +84,6 @@ int compute_flavor(vector<int> flavors) {
     // remove all matched quark/antiquark pairs
     vector<int> new_flavors = remove_pairs(flavors);
 
-    // if (new_flavors.size()>1) {
-    //     cout << "WARNING: more than one flavor. Keeping the first..." << endl;
-    //     cout << "flavors: ";
-    //     for (auto f: new_flavors) cout << f << ", ";
-    //     cout << endl;
-    // }
-
     if (new_flavors.size()==0) return constants::GLUON; // the flavor is gluon since all the quarks are paired
     else return new_flavors[0];
 }
@@ -91,8 +92,10 @@ int compute_flavor(vector<int> flavors) {
 double eloss_integrand( double x, void * params) {
     double alpha = *(double *) params;
     double alpha_x2 = alpha*x*x;
-    return ( (1.-exp(-x))/pow(x,1.5) )*(exp(-alpha_x2) - alpha_x2*boost::math::tgamma(1e-10,alpha_x2));
+
+    return ( (1.-exp(-x))/pow(x,1.5) )*(exp(-alpha_x2) - alpha_x2*boost::math::tgamma(1.e-30,alpha_x2));
 };
+
 
 double Ifun( double alpha, double minval ) {
 
@@ -111,6 +114,7 @@ double Ifun( double alpha, double minval ) {
     return result;
 }
 
+
 double compute_quenching_weight(int flavor, double pT, void * p) {
 
     // retrieve energy loss parameters
@@ -127,19 +131,20 @@ double compute_quenching_weight(int flavor, double pT, void * p) {
     double omega_s = pow( alpha_med*constants::Nc / M_PI, 2. ) * omega_c;
     double alpha = pow( 2.*pT*jetR / (sqrt(qhatL) * n), 2. );
     
-    double Q_minijet, Q_pert;
+    double Q_minijet, Q_pert, Q_pert2;
 
     double Ci;
     if ( is_quark(flavor) ) Ci=constants::CF;
     else if ( is_gluon(flavor) ) Ci=constants::CA;
 
     Q_minijet = exp( (-2.*alpha_med*Ci / M_PI) * (sqrt(2.*omega_c/T)*(1.-exp(-n*T/pT)) - sqrt(2.*omega_c/omega_s)*(1.-exp(-n*omega_s/pT))
-        + sqrt(2.*M_PI*omega_c*n/pT)*( erf(sqrt(omega_s*n/pT)) - erf(sqrt(n*T/pT)))) );
+        + sqrt(2.*M_PI*omega_c*n/pT)*( boost::math::erf(sqrt(omega_s*n/pT)) - boost::math::erf(sqrt(n*T/pT)))) );
  
     Q_pert = exp( -(alpha_med*Ci/M_PI) * sqrt(2.*omega_c*n/pT) * Ifun( alpha, n*omega_s/pT ) );
 
-    return Q_minijet * Q_pert;
+    return pow( Q_minijet * Q_pert, 1./n);
 }
+
 
 vector<PseudoJet> compute_jet_modification( vector<PseudoJet> jet_constituents, void * p ) {
 

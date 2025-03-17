@@ -48,6 +48,7 @@ public:
 
   JetDefinition _jet_def;               // the jet definition
   ClusterSequence _cluster_seq;         // cluster sequence from fastjet (necessary to access jet substructure)
+  ClusterSequence _cs_unmod;
 
   JetDefinition _jet_def_recl;          // jet definition for the reclustering step
 
@@ -55,9 +56,6 @@ public:
   vector<PseudoJet> _unmodified_jets;
 
   vector<PseudoJet> _tagged_particles;  // vector of PseudoJets containing the tagged final-state particles
-  // temporary addition!!
-  vector<PseudoJet> _tagged_cquarks;
-  vector<PseudoJet> _tagged_bquarks;
 
   vector<PseudoJet> _tagged_partons;    // for the case where hadronization is on, also store the tagged particles at parton-level
   PseudoJet _maxpt_tagged_antiparticle; // PseudoJet containing the maximum pt tagged particle in the event
